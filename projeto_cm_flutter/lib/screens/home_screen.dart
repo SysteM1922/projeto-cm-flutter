@@ -11,7 +11,6 @@ class HomeScreen extends StatelessWidget {
       body: Center(
         child: ElevatedButton(
           onPressed: () {
-            // Navigate back to the login screen (simulate logout)
             Navigator.pop(context);
           },
           style: ElevatedButton.styleFrom(
