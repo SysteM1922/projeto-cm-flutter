@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:projeto_cm_flutter/screens/bus_tracking_screen.dart';
 import 'package:projeto_cm_flutter/screens/login_screen.dart';
+import 'package:projeto_cm_flutter/screens/nfc_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -80,6 +81,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     label: 'NFC Validation',
                     onPressed: () {
                       // Navigate to NFC Validation screen (to be implemented)
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const NFCScreen()),
+                      );
                     },
                   ),
                   // Travel History

@@ -24,13 +24,13 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
       ),
       body: FlutterMap(
         options: MapOptions(
-          center: center,
-          zoom: 15.0,
+          initialCenter: center,
+          initialZoom: 15.0,
         ),
         children: [
           TileLayer(
-            urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            subdomains: const ['a', 'b', 'c'],
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            panBuffer: 0,
             userAgentPackageName: 'com.example.projeto_cm_flutter',
           ),
         ],
