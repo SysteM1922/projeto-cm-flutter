@@ -4,8 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
-class BusTrackingScreen extends StatelessWidget {
+class BusTrackingScreen extends StatefulWidget {
   const BusTrackingScreen({super.key});
+
+  @override
+  State<BusTrackingScreen> createState() => _BusTrackingScreenState();
+}
+
+class _BusTrackingScreenState extends State<BusTrackingScreen> { 
 
   @override
   Widget build(BuildContext context) {

@@ -35,6 +35,7 @@ dependencies:
   latlong2: ^0.8.1
   flutter:
     sdk: flutter
+  nfc_manager: ^3.5.0
 
 dev_dependencies:
   flutter_lints: ^4.0.0

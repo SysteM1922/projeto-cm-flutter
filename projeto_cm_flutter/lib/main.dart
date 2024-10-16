@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       // home: const LoginScreen(),
-      home: SignupScreen(),
+      home: const SignupScreen(),
     );
   }
 }
