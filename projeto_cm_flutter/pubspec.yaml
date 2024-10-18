@@ -36,6 +36,7 @@ dependencies:
   flutter_map: ^7.0.2
   flutter_nfc_hce: ^0.1.8
   latlong2: ^0.9.1
+  mobile_scanner: ^6.0.1
 
 dev_dependencies:
   flutter_lints: ^5.0.0
@@ -77,6 +78,5 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-
   assets:
     - assets/images/card.png

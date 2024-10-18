@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:projeto_cm_flutter/screens/bus_tracking_screen.dart';
 import 'package:projeto_cm_flutter/screens/login_screen.dart';
 import 'package:projeto_cm_flutter/screens/nfc_screen.dart';
+import 'package:projeto_cm_flutter/screens/scan_qr_code_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -72,7 +73,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: Icons.qr_code_scanner,
                     label: 'Scan QR Code',
                     onPressed: () {
-                      // Navigate to QR Code Scanner screen (to be implemented)
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ScanQRCodeScreen()),
+                      );
                     },
                   ),
                   // NFC Card Validation
