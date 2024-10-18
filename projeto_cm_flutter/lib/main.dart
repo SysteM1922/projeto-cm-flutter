@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:projeto_cm_flutter/screens/login_screen.dart';
+import 'package:projeto_cm_flutter/screens/nfc_screen.dart';
 import 'package:projeto_cm_flutter/screens/signup_screen.dart';
 
 void main() async {
@@ -29,7 +30,7 @@ class MyApp extends StatelessWidget {
     return const MaterialApp(
       title: 'Flutter Demo',
       // home: const LoginScreen(),
-      home: SignupScreen(),
+      home: const SignupScreen(),
     );
   }
 }

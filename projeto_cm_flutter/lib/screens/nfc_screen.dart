@@ -1,8 +1,8 @@
 import 'dart:developer';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:nfc_host_card_emulation/nfc_host_card_emulation.dart';
+import 'package:flutter_nfc_hce/flutter_nfc_hce.dart';
+import 'package:flutter_nfc_hce/flutter_nfc_hce_platform_interface.dart';
 
 class NFCScreen extends StatefulWidget {
   const NFCScreen({super.key});
@@ -12,8 +12,7 @@ class NFCScreen extends StatefulWidget {
 }
 
 class _NFCScreenState extends State<NFCScreen> {
-
-
+  final FlutterNfcHce _flutterNfcHcePlugin = FlutterNfcHce();
 
   void _showDialog(String message) {
     showDialog(
@@ -43,27 +42,52 @@ class _NFCScreenState extends State<NFCScreen> {
   }
 
   void _checkNFC() async {
-    final nfcState = await NfcHce.checkDeviceNfcState();
+    //getPlatformVersion
+    var platformVersion = await _flutterNfcHcePlugin.getPlatformVersion();
 
-    if (nfcState != NfcState.enabled) {
-      _showDialog(
-          'NFC functionality is not enabled on this device.\nPlease enable NFC and try again.');
-    } else {
-      await NfcHce.init(
-        // AID that match at least one aid-filter in apduservice.xml.
-        aid: Uint8List.fromList([0xA0, 0x00, 0xDA, 0xDA, 0xDA, 0xDA, 0xDA]),
-
-        // next parameter determines whether APDU responses from the ports
-        // on which the connection occurred will be deleted.
-        // If `true`, responses will be deleted, otherwise won't.
-        permanentApduResponses: true,
-
-        // next parameter determines whether APDU commands received on ports
-        // to which there are no responses will be added to the stream.
-        // If `true`, command won't be added, otherwise will.
-        listenOnlyConfiguredPorts: false,
-      );
+    if (platformVersion == null) {
+      _showDialog('NFC is not supported on this device.');
+      return;
     }
+
+    //isNfcHceSupported
+    bool? isNfcHceSupported = await _flutterNfcHcePlugin.isNfcHceSupported();
+
+    if (!isNfcHceSupported) {
+      _showDialog('NFC HCE is not supported on this device.');
+      return;
+    }
+
+    //isNfcEnabled
+    bool? isNfcEnabled = await _flutterNfcHcePlugin.isNfcEnabled();
+
+    if (!isNfcEnabled) {
+      _showDialog('NFC is not enabled on this device.');
+      return;
+    }
+  }
+
+  Future<String?> startNfcHce(
+    String content, {
+    String mimeType = 'text/plain',
+    bool persistMessage = true,
+  }) {
+    return FlutterNfcHcePlatform.instance.startNfcHce(
+      content,
+      mimeType,
+      persistMessage,
+    );
+  }
+
+  void _emulateNfcCard() async {
+    //nfc content
+    var id = 'guilherme_antunes';
+
+    await startNfcHce(id);
+  }
+
+  void _stopNfcHce() async {
+    await FlutterNfcHcePlatform.instance.stopNfcHce();
   }
 
   @override
@@ -72,9 +96,37 @@ class _NFCScreenState extends State<NFCScreen> {
 
     _checkNFC();
 
-    NfcHce.stream.listen((command) {
-      
-    });
+    _emulateNfcCard();
+  }
+
+  @override
+  void dispose() {
+    _stopNfcHce();
+
+    super.dispose();
+  }
+
+  Widget _buildContainer() {
+    return Container(
+        margin:
+            EdgeInsets.only(top: 20.0, left: 20.0, right: 20.0, bottom: 20.0),
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(1),
+              spreadRadius: 0,
+              blurRadius: 5,
+              offset: const Offset(10, 10), // changes position of shadow
+            ),
+          ],
+          borderRadius: BorderRadius.circular(30.0),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30.0),
+          child: Image.asset(
+            'assets/images/card.png',
+          ),
+        ));
   }
 
   @override
@@ -83,24 +135,23 @@ class _NFCScreenState extends State<NFCScreen> {
       appBar: AppBar(
         title: const Text('Card Validation'),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Icon(
-              Icons.contactless_rounded,
-              size: 100.0,
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Flexible(
+              child: Draggable(
+                  feedback: _buildContainer(),
+                  childWhenDragging: Container(),
+                  child: _buildContainer())),
+          Container(
+            padding: const EdgeInsets.all(20.0),
+            child: Text(
+              textAlign: TextAlign.center,
+              'Please tap your card on the NFC reader.',
+              style: TextStyle(fontSize: 24.0),
             ),
-            Container(
-              margin: EdgeInsets.only(top: 20.0, left: 20.0, right: 20.0),
-              child: Text(
-                textAlign: TextAlign.center,
-                'Please tap your card on the NFC reader.',
-                style: TextStyle(fontSize: 24.0),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
