@@ -16,6 +16,11 @@ class MainApp extends StatelessWidget {
       systemNavigationBarColor: Colors.white,
     ));
 
+    SystemChrome.setPreferredOrientations(<DeviceOrientation>[
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+
     return const MaterialApp(
       home: NFCReaderScreen(),
     );

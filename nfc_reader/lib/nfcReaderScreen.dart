@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:developer';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:nfc_manager/nfc_manager.dart';
@@ -11,6 +13,8 @@ class NFCReaderScreen extends StatefulWidget {
 }
 
 class _NFCReaderScreenState extends State<NFCReaderScreen> {
+  String _ndefContent = 'Waiting for NFC card...';
+
   void _showDialog(String message) {
     showDialog(
       context: context,
@@ -38,16 +42,59 @@ class _NFCReaderScreenState extends State<NFCReaderScreen> {
     if (!isNFCEnabled) {
       _showDialog(
           'NFC functionality is not enabled on this device.\nPlease enable NFC and try again.');
-    }
-    else {
+    } else {
       _readNFC();
     }
   }
 
   void _readNFC() async {
     NfcManager.instance.startSession(
+      onError: (error) async {
+        log('-------------->error: $error');
+        _showDialog('Error reading NFC card: $error');
+      },
       onDiscovered: (NfcTag tag) async {
-        log('Tag discovered: ${tag.data}');
+        var ndef = Ndef.from(tag);
+        if (ndef == null) {
+          log('Tag is not compatible with NDEF');
+          return;
+        }
+
+        var record = tag.data['ndef']['cachedMessage']['records'][0];
+
+        var payload = Uint8List.fromList(record['payload']);
+
+        var error = [
+          2,
+          101,
+          110,
+          67,
+          105,
+          97,
+          111,
+          44,
+          32,
+          99,
+          111,
+          109,
+          101,
+          32,
+          118,
+          97,
+          63
+        ]; // \^BenCiao, come v<…>
+
+        if (payload.toString() != error.toString()) {
+          //payload list index from 1 to list's length
+          _ndefContent = utf8.decode(Uint8List.fromList(payload.sublist(3)));
+        } else {
+          log('Error reading NFC card');
+        }
+
+        setState(() {
+          _ndefContent =
+              'Payload: $_ndefContent';
+        });
       },
     );
   }
@@ -66,6 +113,13 @@ class _NFCReaderScreenState extends State<NFCReaderScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            Container(
+              margin: const EdgeInsets.only(bottom: 20.0),
+              child: Text(
+                _ndefContent,
+                style: const TextStyle(fontSize: 10.0),
+              ),
+            ),
             const Icon(
               Icons.contactless_rounded,
               size: 100.0,
