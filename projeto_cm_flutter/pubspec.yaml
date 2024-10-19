@@ -35,7 +35,9 @@ dependencies:
     sdk: flutter
   flutter_map: ^7.0.2
   flutter_nfc_hce: ^0.1.8
+  isar: ^3.1.0+1
   latlong2: ^0.9.1
+  local_auth: ^2.3.0
   mobile_scanner: ^6.0.1
 
 dev_dependencies:

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:projeto_cm_flutter/screens/home_screen.dart';
@@ -22,6 +24,8 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+
+      log('$userCredential');
 
       Navigator.pushReplacement(
         context,
