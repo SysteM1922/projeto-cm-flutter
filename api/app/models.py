@@ -57,7 +57,7 @@ class BusStop(Base):
     stop_id = Column(UUID, index=True, nullable=False)
     bus_id = Column(UUID, index=True, nullable=False)
     route_id = Column(UUID, index=True, nullable=False)
-    stop_time = Column(DATETIME, nullable=False)
+    stop_time = Column(DATETIME, nullable=True)
 
 class System(Base):
     __tablename__ = "system"

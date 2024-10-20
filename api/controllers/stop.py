@@ -27,7 +27,7 @@ async def create_stop(data: StopCreate, db: Session = Depends(get_session)):
 
 @router.get("/schedule/{stop_id}")
 async def get_stop_schedule(stop_id: UUID, db: Session = Depends(get_session)):
-    route_stops = db.query(BusStop).filter(BusStop.stop_id == stop_id).all()
+    route_stops = db.query(BusStop).filter(BusStop.stop_id == stop_id).distinct(BusStop.bus_id).all()
 
     if not route_stops:
         return JSONResponse(content={"message": "No buses scheduled for this stop"}, status_code=404)

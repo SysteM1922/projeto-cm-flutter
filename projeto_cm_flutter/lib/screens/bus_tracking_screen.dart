@@ -15,7 +15,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final LatLng center = LatLng(double.parse('38.736946'), double.parse('-9.142685'));
+    final LatLng center = LatLng(40.63672, -8.65049);
 
     return Scaffold(
       appBar: AppBar(
@@ -25,7 +25,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
       body: FlutterMap(
         options: MapOptions(
           initialCenter: center,
-          initialZoom: 15.0,
+          initialZoom: 14.0,
         ),
         children: [
           TileLayer(
