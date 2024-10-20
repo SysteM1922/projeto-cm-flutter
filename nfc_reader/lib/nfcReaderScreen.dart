@@ -2,8 +2,17 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:typed_data';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:nfc_manager/nfc_manager.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
+
+import 'package:nfc_reader/messageScreens/apiErrorScreen.dart';
+import 'package:nfc_reader/messageScreens/noConnectionScreen.dart';
+import 'package:nfc_reader/messageScreens/unrecognizedCardScreen.dart';
+import 'package:nfc_reader/messageScreens/unrecognizedUserScreen.dart';
+import 'package:nfc_reader/messageScreens/successScreen.dart';
 
 class NFCReaderScreen extends StatefulWidget {
   const NFCReaderScreen({super.key});
@@ -13,7 +22,8 @@ class NFCReaderScreen extends StatefulWidget {
 }
 
 class _NFCReaderScreenState extends State<NFCReaderScreen> {
-  String _ndefContent = 'Waiting for NFC card...';
+  String _apiUrl = '';
+  String _busId = '';
 
   void _showDialog(String message) {
     showDialog(
@@ -47,16 +57,35 @@ class _NFCReaderScreenState extends State<NFCReaderScreen> {
     }
   }
 
+  void _alertPage(StatefulWidget page) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => page),
+    );
+
+    Future.delayed(const Duration(seconds: 2), () {
+      Navigator.pop(context);
+    });
+  }
+
   void _readNFC() async {
+    String ndefContent = '';
+
     NfcManager.instance.startSession(
       onError: (error) async {
-        log('-------------->error: $error');
         _showDialog('Error reading NFC card: $error');
       },
       onDiscovered: (NfcTag tag) async {
+        bool result = await InternetConnectionChecker().hasConnection;
+
+        if (!result) {
+          _alertPage(const NoConnectionScreen());
+          return;
+        }
+
         var ndef = Ndef.from(tag);
         if (ndef == null) {
-          log('Tag is not compatible with NDEF');
+          _showDialog('Error reading NFC card: NDEF is null');
           return;
         }
 
@@ -82,19 +111,39 @@ class _NFCReaderScreenState extends State<NFCReaderScreen> {
           118,
           97,
           63
-        ]; // \^BenCiao, come v<…>
+        ];
 
         if (payload.toString() != error.toString()) {
           //payload list index from 1 to list's length
-          _ndefContent = utf8.decode(Uint8List.fromList(payload.sublist(3)));
+          ndefContent = utf8.decode(Uint8List.fromList(payload.sublist(3)));
+          if (ndefContent == '') {
+            _alertPage(const UnrecognizedCardScreen());
+            return;
+          }
         } else {
-          log('Error reading NFC card');
+          _alertPage(const UnrecognizedCardScreen());
+          return;
         }
 
-        setState(() {
-          _ndefContent =
-              'Payload: $_ndefContent';
-        });
+        http.Response response = await http.post(
+          Uri.parse('$_apiUrl/travel/register'),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+          body: jsonEncode(<String, String>{
+            'bus_id': _busId,
+            'user_id': ndefContent,
+          }),
+        );
+
+        if (response.statusCode == 404 || response.statusCode == 422) {
+          _alertPage(const UnrecognizedUserScreen());
+        } else if (response.statusCode == 200) {
+          String user = jsonDecode(response.body)['user_name'];
+          _alertPage(SuccessScreen(extraText: user));
+        } else {
+          _alertPage(const APIErrorScreen());
+        }
       },
     );
   }
@@ -102,6 +151,9 @@ class _NFCReaderScreenState extends State<NFCReaderScreen> {
   @override
   void initState() {
     super.initState();
+
+    _apiUrl = dotenv.env['API_URL']!;
+    _busId = dotenv.env['BUS_ID']!;
 
     _checkNFC();
   }
@@ -115,9 +167,9 @@ class _NFCReaderScreenState extends State<NFCReaderScreen> {
           children: <Widget>[
             Container(
               margin: const EdgeInsets.only(bottom: 20.0),
-              child: Text(
-                _ndefContent,
-                style: const TextStyle(fontSize: 10.0),
+              child: const Text(
+                'Waiting for NFC card...',
+                style: TextStyle(fontSize: 10.0),
               ),
             ),
             const Icon(
