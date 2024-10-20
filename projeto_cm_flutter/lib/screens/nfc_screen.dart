@@ -11,7 +11,7 @@ class NFCScreen extends StatefulWidget {
   State<NFCScreen> createState() => _NFCScreenState();
 }
 
-class _NFCScreenState extends State<NFCScreen> {
+class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
   final FlutterNfcHce _flutterNfcHcePlugin = FlutterNfcHce();
 
   void _showDialog(String message) {
@@ -94,6 +94,8 @@ class _NFCScreenState extends State<NFCScreen> {
   void initState() {
     super.initState();
 
+    WidgetsBinding.instance.addObserver(this);
+
     _checkNFC();
 
     _emulateNfcCard();
@@ -104,6 +106,15 @@ class _NFCScreenState extends State<NFCScreen> {
     _stopNfcHce();
 
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _stopNfcHce();
+    } else if (state == AppLifecycleState.resumed) {
+      _emulateNfcCard();
+    }
   }
 
   @override
