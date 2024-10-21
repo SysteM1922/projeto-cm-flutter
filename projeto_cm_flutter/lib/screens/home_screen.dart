@@ -13,7 +13,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-
   // Method to sign out
   void _signOut(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
@@ -75,7 +74,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const ScanQRCodeScreen()),
+                        MaterialPageRoute(
+                            builder: (context) => const ScanQRCodeScreen()),
                       );
                     },
                   ),
