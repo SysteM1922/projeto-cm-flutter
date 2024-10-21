@@ -32,9 +32,11 @@ dependencies:
   firebase_core: ^3.6.0
   flutter:
     sdk: flutter
+  flutter_dotenv: ^5.2.1
   flutter_map: ^7.0.2
   flutter_nfc_hce: ^0.1.8
   flutter_secure_storage: ^9.2.2
+  http: ^1.2.2
   internet_connection_checker: ^1.0.0+1
   isar: ^3.1.0+1
   latlong2: ^0.9.1
@@ -84,3 +86,4 @@ flutter:
   # see https://flutter.dev/to/font-from-package
   assets:
     - assets/images/card.png
+    - .env
