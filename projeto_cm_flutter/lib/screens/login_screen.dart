@@ -195,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     setState(() {
-      biometrics = prefs.getBool('biometrics')!;
+      biometrics = prefs.getBool('biometrics') ?? false;
     });
 
     if (biometrics) {
