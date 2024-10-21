@@ -50,7 +50,7 @@ class _ResultScreenState extends State<ResultScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Found Schedule"),
+        title: const Text("Bus Schedule"),
         centerTitle: true,
         leading: IconButton(
           onPressed: () {
@@ -62,46 +62,86 @@ class _ResultScreenState extends State<ResultScreen> {
       ),
       body: Center(
         child: isLoading
-            ? const CircularProgressIndicator() 
+            ? const CircularProgressIndicator()
             : busSchedules != null
                 ? Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          "Scanned Code:",
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          widget.code,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 20),
-                        Expanded(
-                          // print data
-                          child: ListView.builder(
-                            itemCount: busSchedules!.length,
-                            itemBuilder: (context, index) {
-                              final schedule = busSchedules![index];
-                              return ListTile(
-                                title: Text(
-                                  "Route: ${schedule['route_number']} - Bus ID: ${schedule['bus_id']}",
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                                subtitle: Text(
-                                  "Arrival Time: ${schedule['arrival_time']}",
-                                  style: const TextStyle(fontSize: 14),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                    padding: const EdgeInsets.all(16.0),
+                    child: ListView.builder(
+                      itemCount: busSchedules!.length,
+                      itemBuilder: (context, index) {
+                        final schedule = busSchedules![index];
+                        return _buildBusScheduleCard(schedule);
+                      },
                     ),
                   )
                 : const Text("Failed to load schedule."),
+      ),
+    );
+  }
+
+  Widget _buildBusScheduleCard(dynamic schedule) {
+    String arrivalTime = schedule['arrival_time'].substring(11, 16); 
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15.0),
+      ),
+      elevation: 5,
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.directions_bus, size: 40, color: Colors.blue),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Route: ${schedule['route_number']}",
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Arrival Time:",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  children: [
+                    const Icon(Icons.access_time, color: Colors.green),
+                    const SizedBox(width: 5),
+                    Text(
+                      arrivalTime,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
