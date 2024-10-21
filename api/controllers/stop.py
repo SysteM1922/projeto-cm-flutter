@@ -29,6 +29,8 @@ async def create_stop(data: StopCreate, db: Session = Depends(get_session)):
 async def get_stop_schedule(stop_id: UUID, db: Session = Depends(get_session)):
     route_stops = db.query(BusStop).filter(BusStop.stop_id == stop_id).all()
 
+    stop_name = db.query(Stop).filter(Stop.id == stop_id).first().stop_name
+
     if not route_stops:
         return JSONResponse(content={"message": "No buses scheduled for this stop"}, status_code=404)
 
@@ -37,7 +39,7 @@ async def get_stop_schedule(stop_id: UUID, db: Session = Depends(get_session)):
         bus = db.query(Bus).filter(Bus.id == route_stop.bus_id).first()
         arrival_times.append({"bus_id": bus.id, "route_id": bus.route_id, "route_number": bus.route_number, "arrival_time": route_stop.stop_time})
 
-    return arrival_times
+    return {"stop_name": stop_name, "arrival_times": arrival_times}
 
 @router.get("/location/{stop_id}")
 async def get_stop_location(stop_id: UUID, db: Session = Depends(get_session)):
