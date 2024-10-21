@@ -23,13 +23,15 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> _signUp() async {
     try {
       // Create user with email and password
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      UserCredential userCredential =
+          await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
       // Update the user's display name with the username
-      await userCredential.user?.updateDisplayName(_usernameController.text.trim());
+      await userCredential.user
+          ?.updateDisplayName(_usernameController.text.trim());
 
       // Navigate to HomeScreen upon successful sign up
       Navigator.pushReplacement(
@@ -75,7 +77,8 @@ class _SignupScreenState extends State<SignupScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: SingleChildScrollView( // Added to prevent overflow
+        child: SingleChildScrollView(
+          // Added to prevent overflow
           child: Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
@@ -94,40 +97,47 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 const SizedBox(height: 30),
 
-                // Username Input Field
-                TextField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    labelText: 'Username',
-                    prefixIcon: const Icon(Icons.person),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                AutofillGroup(
+                    child: Column(
+                  children: [
+                    // Username Input Field
+                    TextField(
+                      controller: _usernameController,
+                      decoration: InputDecoration(
+                        labelText: 'Username',
+                        prefixIcon: const Icon(Icons.person),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                      ),
                     ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                ),
-                const SizedBox(height: 20),
+                    const SizedBox(height: 20),
 
-                // Email Input Field
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: const Icon(Icons.email),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    // Email Input Field
+                    TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.email],
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: const Icon(Icons.email),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                      ),
                     ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                ),
+                  ],
+                )),
                 const SizedBox(height: 20),
 
                 // Password Input Field
                 TextField(
                   controller: _passwordController,
+                  autofillHints: const [AutofillHints.password],
                   obscureText: true,
                   decoration: InputDecoration(
                     labelText: 'Password',
@@ -149,13 +159,14 @@ class _SignupScreenState extends State<SignupScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    backgroundColor: Colors.blue[800],
                   ),
                   child: const Text(
                     'Sign Up',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -167,7 +178,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     // Navigate back to the LoginScreen
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const LoginScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const LoginScreen()),
                     );
                   },
                   child: Text(

@@ -1,9 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:projeto_cm_flutter/screens/login_screen.dart';
-import 'package:projeto_cm_flutter/screens/nfc_screen.dart';
-import 'package:projeto_cm_flutter/screens/signup_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,17 +19,16 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.white,
     ));
 
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
     ]);
 
-    return const MaterialApp(
+    return MaterialApp(
       title: 'Flutter Demo',
-      // home: const LoginScreen(),
-      home: const SignupScreen(),
+      home: const LoginScreen(),
     );
   }
 }
