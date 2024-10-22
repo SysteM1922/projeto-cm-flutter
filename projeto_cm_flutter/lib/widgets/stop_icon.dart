@@ -6,12 +6,11 @@ class StopIcon extends StatelessWidget {
   final bool isFirst;
   final bool isLast;
 
-  const StopIcon({Key? key, required this.isFirst, required this.isLast})
-      : super(key: key);
+  const StopIcon({super.key, required this.isFirst, required this.isLast});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 24, 
       child: Column(
         mainAxisSize: MainAxisSize.min, 

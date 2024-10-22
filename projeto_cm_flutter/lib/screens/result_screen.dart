@@ -7,8 +7,7 @@ class ResultScreen extends StatefulWidget {
   final String code;
   final VoidCallback screenClosed;
 
-  const ResultScreen({Key? key, required this.code, required this.screenClosed})
-      : super(key: key);
+  const ResultScreen({super.key, required this.code, required this.screenClosed});
 
   @override
   _ResultScreenState createState() => _ResultScreenState();

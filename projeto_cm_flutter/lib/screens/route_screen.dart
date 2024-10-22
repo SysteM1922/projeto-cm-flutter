@@ -7,7 +7,7 @@ import 'package:projeto_cm_flutter/widgets/stop_icon.dart';
 class RouteScreen extends StatefulWidget {
   final String routeId;
 
-  const RouteScreen({Key? key, required this.routeId}) : super(key: key);
+  const RouteScreen({super.key, required this.routeId});
 
   @override
   _RouteScreenState createState() => _RouteScreenState();
@@ -34,7 +34,7 @@ class _RouteScreenState extends State<RouteScreen> {
       return;
     }
 
-    final Uri url = Uri.parse('${apiUrl}/route/${widget.routeId}');
+    final Uri url = Uri.parse('$apiUrl/route/${widget.routeId}');
 
     try {
       final response = await http.get(url);

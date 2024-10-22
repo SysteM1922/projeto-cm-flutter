@@ -6,16 +6,16 @@ class DashedLine extends StatelessWidget {
   final Color color;
 
   const DashedLine({
-    Key? key,
+    super.key,
     this.height = 50,
     this.dashHeight = 5,
     this.color = Colors.grey,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     int dashCount = (height / (2 * dashHeight)).floor();
-    return Container(
+    return SizedBox(
       height: height,
       width: 2,
       child: Column(

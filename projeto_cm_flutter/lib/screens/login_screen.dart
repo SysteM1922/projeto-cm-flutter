@@ -95,12 +95,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _login({String email = "", String password = ""}) async {
     try {
-      bool _withBiometrics = false;
+      bool withBiometrics = false;
       if (email.isEmpty || password.isEmpty) {
         email = _emailController.text;
         password = _passwordController.text;
       } else {
-        _withBiometrics = true;
+        withBiometrics = true;
       }
 
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
@@ -113,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       log('$userCredential');
 
-      if (!_withBiometrics) {
+      if (!withBiometrics) {
         await showDialog<bool>(
           context: context,
           builder: (context) {

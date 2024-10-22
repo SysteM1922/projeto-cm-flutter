@@ -4,7 +4,7 @@ import 'package:projeto_cm_flutter/screens/result_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ScanQRCodeScreen extends StatefulWidget {
-  const ScanQRCodeScreen({Key? key}) : super(key: key);
+  const ScanQRCodeScreen({super.key});
 
   @override
   State<ScanQRCodeScreen> createState() => _ScanQRCodeScreenState();
