@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
@@ -40,6 +38,36 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
     super.dispose();
   }
 
+  void _toOption0() {
+    _gpsIcon = Icon(Icons.gps_off, color: Colors.red, size: 35);
+    _currentOption = 0;
+    _alignOnUpdate = AlignOnUpdate.never;
+    setState(() {});
+  }
+
+  void _toOption1() {
+    _gpsIcon = Icon(Icons.gps_not_fixed, color: Color.fromRGBO(129, 129, 129, 1), size: 35);
+    _currentOption = 1;
+    _alignOnUpdate = AlignOnUpdate.never;
+    setState(() {});
+  }
+
+  void _toOption2(Position position) {
+    _mapController.move(LatLng(position.latitude, position.longitude), _mapController.camera.zoom);
+    _gpsIcon = Icon(Icons.gps_fixed, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
+    _currentOption = 2;
+    _alignOnUpdate = AlignOnUpdate.never;
+    setState(() {});
+  }
+
+  void _toOption3(Position position) {
+    _mapController.moveAndRotate(LatLng(position.latitude, position.longitude), 17.0, _mapController.camera.rotation);
+    _gpsIcon = Icon(Icons.explore, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
+    _currentOption = 3;
+    _alignOnUpdate = AlignOnUpdate.always;
+    setState(() {});
+  }
+
   void _checkConnection() async {
     bool result = await InternetConnectionChecker().hasConnection;
 
@@ -62,40 +90,26 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
       try {
         LocationPermission permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          _gpsIcon = Icon(Icons.gps_off, color: Colors.red, size: 35);
+          _toOption0();
         } else if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
           Position position = await Geolocator.getCurrentPosition(locationSettings: LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 10));
-          _gpsIcon = Icon(Icons.gps_fixed, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
           center = LatLng(position.latitude, position.longitude);
-          _mapController.move(LatLng(position.latitude, position.longitude), _mapController.camera.zoom);
-          _currentOption = 2;
           _gpsOn = true;
+          _toOption2(position);
         }
       } catch (e) {
-        _gpsIcon = Icon(Icons.gps_off, color: Colors.red, size: 35);
+        _toOption0();
       }
-
-      _alignOnUpdate = AlignOnUpdate.never;
-      setState(() {});
       return;
     } else {
       Position position = await Geolocator.getCurrentPosition(locationSettings: LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 10));
       if (_currentOption == 1) {
-        _mapController.move(LatLng(position.latitude, position.longitude), _mapController.camera.zoom);
-        _gpsIcon = Icon(Icons.gps_fixed, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
-        _currentOption = 2;
+        _toOption2(position);
       } else if (_currentOption == 2) {
-        _mapController.moveAndRotate(LatLng(position.latitude, position.longitude), 17.0, _mapController.camera.rotation);
-        _gpsIcon = Icon(Icons.explore, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
-        _currentOption = 3;
-        _alignOnUpdate = AlignOnUpdate.always;
+        _toOption3(position);
       } else if (_currentOption == 3) {
-        _mapController.move(LatLng(position.latitude, position.longitude), _mapController.camera.zoom);
-        _gpsIcon = Icon(Icons.gps_fixed, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
-        _currentOption = 2;
-        _alignOnUpdate = AlignOnUpdate.never;
+        _toOption2(position);
       }
-      setState(() {});
     }
   }
 
@@ -121,11 +135,8 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
               onMapEvent: (MapEvent event) {
                 if (event is MapEventMoveStart) {
                   if (_currentOption > 1) {
-                    _currentOption = 1;
-                    _gpsIcon = Icon(Icons.gps_not_fixed, color: Color.fromRGBO(129, 129, 129, 1), size: 35);
+                    _toOption1();
                   }
-                  _alignOnUpdate = AlignOnUpdate.never;
-                  setState(() {});
                 }
               },
             ),
