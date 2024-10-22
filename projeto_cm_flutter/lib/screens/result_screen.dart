@@ -7,7 +7,8 @@ class ResultScreen extends StatefulWidget {
   final String code;
   final VoidCallback screenClosed;
 
-  const ResultScreen({Key? key, required this.code, required this.screenClosed}) : super(key: key);
+  const ResultScreen({Key? key, required this.code, required this.screenClosed})
+      : super(key: key);
 
   @override
   _ResultScreenState createState() => _ResultScreenState();
@@ -32,10 +33,13 @@ class _ResultScreenState extends State<ResultScreen> {
       if (response.statusCode == 200) {
         var data = json.decode(utf8.decode(response.bodyBytes));
 
+        // Process arrival times to keep only the earliest arrival for each bus_id
+        List<dynamic> processedArrivalTimes = processArrivalTimes(data['arrival_times']);
+
         // get stop_name and arrival_times from the response
         setState(() {
           stopName = data['stop_name'];
-          arrivalTimes = data['arrival_times'];
+          arrivalTimes = processedArrivalTimes;
           isLoading = false;
         });
       } else {
@@ -52,6 +56,37 @@ class _ResultScreenState extends State<ResultScreen> {
       });
       debugPrint("Error fetching bus schedules: $e");
     }
+  }
+
+  // Function to process arrival times
+  List<dynamic> processArrivalTimes(List<dynamic> arrivalTimes) {
+    Map<String, dynamic> busSchedules = {};
+
+    for (var schedule in arrivalTimes) {
+      String busId = schedule['bus_id'].toString();
+      String arrivalTimeStr = schedule['arrival_time'];
+
+      // Parse the arrival time into DateTime
+      DateTime arrivalTime = DateTime.parse(arrivalTimeStr);
+
+      if (busSchedules.containsKey(busId)) {
+        DateTime existingArrivalTime = DateTime.parse(busSchedules[busId]['arrival_time']);
+        // Keep the schedule with the earliest arrival time
+        if (arrivalTime.isBefore(existingArrivalTime)) {
+          busSchedules[busId] = schedule;
+        }
+      } else {
+        busSchedules[busId] = schedule;
+      }
+    }
+
+    // Convert the busSchedules map values to a list
+    List<dynamic> processedList = busSchedules.values.toList();
+
+    // Sort the list by arrival time
+    processedList.sort((a, b) => a['arrival_time'].compareTo(b['arrival_time']));
+
+    return processedList;
   }
 
   @override
@@ -95,7 +130,8 @@ class _ResultScreenState extends State<ResultScreen> {
                                   return _buildBusScheduleCard(schedule);
                                 },
                               )
-                            : const Center(child: Text("No buses scheduled for this stop.")),
+                            : const Center(
+                                child: Text("No buses scheduled for this stop.")),
                       ),
                     ],
                   ),
@@ -122,7 +158,7 @@ class _ResultScreenState extends State<ResultScreen> {
               children: [
                 const Icon(Icons.directions_bus, size: 40, color: Colors.blue),
                 const SizedBox(width: 16),
-                Expanded( // Ensures text wraps correctly
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -133,7 +169,7 @@ class _ResultScreenState extends State<ResultScreen> {
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
                         ),
-                        overflow: TextOverflow.ellipsis, // Prevent overflow
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 5),
                     ],
@@ -147,6 +183,7 @@ class _ResultScreenState extends State<ResultScreen> {
               children: [
                 Row(
                   children: [
+                    const SizedBox(width: 8),
                     const Icon(Icons.access_time, color: Colors.green),
                     const SizedBox(width: 5),
                     Text(
