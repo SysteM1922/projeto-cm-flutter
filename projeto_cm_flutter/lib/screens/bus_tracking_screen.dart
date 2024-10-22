@@ -30,6 +30,8 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
 
   bool _internetModal = false;
 
+  bool isLoading = false;
+
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
   StreamSubscription<List<ConnectivityResult>>? _connectionServiceStatusStream;
 
@@ -145,6 +147,9 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
   }
 
   void _requestLocationPermission() async {
+    setState(() {
+      isLoading = true;
+    });
     try {
       LocationPermission permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
@@ -166,25 +171,32 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
     } catch (e) {
       _gpsOn = false;
       _toOption0();
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
-  void _listenToLocationServiceStatus() async {
-    _locationServiceStatusStream =
-        Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
+  void _listenToLocationServiceStatus() {
+  _locationServiceStatusStream = Geolocator.getServiceStatusStream().listen(
+    (ServiceStatus status) {
       if (status == ServiceStatus.disabled) {
         _gpsOn = false;
         if (_currentOption != 0) {
           _toOption0();
         }
+        // when disabled 
+        _showEnableLocationDialog();
       } else if (status == ServiceStatus.enabled) {
         _gpsOn = true;
         if (_currentOption == 0) {
           _toOption1();
         }
       }
-    });
-  }
+    },
+  );
+}
 
   void _listenToConnectionServiceStatus() async {
     _connectionServiceStatusStream = Connectivity()
@@ -219,6 +231,9 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
 
   void _changeLocationOption() async {
     if (_gpsOn) {
+      setState(() {
+        isLoading = true;
+      });
       try {
         Position position = await Geolocator.getCurrentPosition(
             locationSettings: LocationSettings(
@@ -233,16 +248,49 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
           _toOption2(position);
         }
       } catch (e) {
-        _gpsOn = false; // this too?
+        _gpsOn = false;
         if (mounted) {
           setState(() {});
         }
         _showLocationDialog(
             "Unable to get current location. Please enable location services.");
+      } finally {
+        setState(() {
+          isLoading = false;
+        });
       }
     } else {
-      _requestLocationPermission();
+      _showEnableLocationDialog();
     }
+  }
+
+  void _showEnableLocationDialog() {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Location Services Disabled'),
+          content: Text(
+              'Location services are disabled. Would you like to enable them?'),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await Geolocator.openLocationSettings();
+              },
+              child: Text('Yes', style: TextStyle(color: Colors.blue[800])),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('No', style: TextStyle(color: Colors.blue[800])),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -320,6 +368,13 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
               child: _gpsIcon,
             ),
           ),
+          if (isLoading)
+            Container(
+              color: Colors.black45,
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
         ],
       ),
     );
