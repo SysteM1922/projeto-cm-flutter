@@ -26,14 +26,14 @@ class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
                 Navigator.pop(context);
                 _checkNFC();
               },
-              child: const Text('Ok'),
+              child: Text('Ok', style: TextStyle(color: Colors.blue[800])),
             ),
             TextButton(
                 onPressed: () {
                   Navigator.pop(context);
                   Navigator.pop(context);
                 },
-                child: const Text('Cancel')),
+                child: Text('Cancel', style: TextStyle(color: Colors.blue[800]))),
           ],
         );
       },

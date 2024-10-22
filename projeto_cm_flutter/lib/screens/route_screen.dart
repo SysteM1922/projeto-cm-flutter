@@ -27,6 +27,9 @@ class _RouteScreenState extends State<RouteScreen> {
   Future<void> fetchRouteData() async {
     final String? apiUrl = dotenv.env['API_URL'];
     if (apiUrl == null || apiUrl.isEmpty) {
+      if (!mounted) {
+      return;
+    }
       setState(() {
         isLoading = false;
         errorMessage = "API URL not configured.";
@@ -38,6 +41,9 @@ class _RouteScreenState extends State<RouteScreen> {
 
     try {
       final response = await http.get(url);
+      if (!mounted) {
+      return;
+    }
       if (response.statusCode == 200) {
         setState(() {
           routeData = json.decode(utf8.decode(response.bodyBytes));
@@ -54,6 +60,9 @@ class _RouteScreenState extends State<RouteScreen> {
             "Failed to fetch data. Status code: ${response.statusCode}");
       }
     } catch (e) {
+      if (!mounted) {
+      return;
+    }
       setState(() {
         routeData = null;
         isLoading = false;

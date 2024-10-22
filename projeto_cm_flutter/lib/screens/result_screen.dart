@@ -36,12 +36,18 @@ class _ResultScreenState extends State<ResultScreen> {
         List<dynamic> processedArrivalTimes = processArrivalTimes(data['arrival_times']);
 
         // get stop_name and arrival_times from the response
+        if (!mounted) {
+          return;
+        }
         setState(() {
           stopName = data['stop_name'];
           arrivalTimes = processedArrivalTimes;
           isLoading = false;
         });
       } else {
+        if (!mounted) {
+          return;
+        }
         setState(() {
           arrivalTimes = null;
           isLoading = false;
@@ -49,6 +55,9 @@ class _ResultScreenState extends State<ResultScreen> {
         debugPrint("Failed to fetch bus schedules. Status code: ${response.statusCode}");
       }
     } catch (e) {
+      if (!mounted) {
+        return;
+      }
       setState(() {
         arrivalTimes = null;
         isLoading = false;
@@ -129,8 +138,7 @@ class _ResultScreenState extends State<ResultScreen> {
                                   return _buildBusScheduleCard(schedule);
                                 },
                               )
-                            : const Center(
-                                child: Text("No buses scheduled for this stop.")),
+                            : const Center(child: Text("No buses scheduled for this stop.")),
                       ),
                     ],
                   ),

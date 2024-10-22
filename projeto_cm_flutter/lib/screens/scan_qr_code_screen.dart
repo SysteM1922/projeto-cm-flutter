@@ -53,14 +53,13 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
   }
 
   void _showInvalidUrlDialog() {
-    _isDialogOpen = true; 
+    _isDialogOpen = true;
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text("Invalid QR Code"),
-          content: const Text(
-              "The scanned QR code is invalid. Please scan a valid URL."),
+          content: const Text("The scanned QR code is invalid. Please scan a valid URL."),
           actions: [
             TextButton(
               child: const Text("OK"),
@@ -93,6 +92,9 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
             icon: Icon(isTorchOn ? Icons.flash_on : Icons.flash_off),
             onPressed: () {
               cameraController.toggleTorch();
+              if (!mounted) {
+                return;
+              }
               setState(() {
                 isTorchOn = !isTorchOn;
               });

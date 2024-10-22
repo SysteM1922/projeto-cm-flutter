@@ -3,7 +3,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -74,14 +74,17 @@ class _LoginScreenState extends State<LoginScreen> {
         String? password = await _storage.read(key: 'password');
 
         if (email != null && password != null) {
-          bool connection = await InternetConnectionChecker().hasConnection;
-          if (!connection) {
+          List<ConnectivityResult> connection = (await Connectivity().checkConnectivity());
+          if (connection.contains(ConnectivityResult.wifi) ||
+              connection.contains(ConnectivityResult.mobile) ||
+              connection.contains(ConnectivityResult.ethernet) ||
+              connection.contains(ConnectivityResult.vpn)) {
+            _login(email: email, password: password);
+          } else {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const HomeScreen()),
             );
-          } else {
-            _login(email: email, password: password);
           }
         }
       } catch (e) {
@@ -120,16 +123,14 @@ class _LoginScreenState extends State<LoginScreen> {
             return AlertDialog(
               backgroundColor: Colors.white,
               title: const Text('Biometric Login'),
-              content: const Text(
-                  'Do you want to enable biometric login for future logins?'),
+              content: const Text('Do you want to enable biometric login for future logins?'),
               actions: [
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context, false);
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(
-                          builder: (context) => const HomeScreen()),
+                      MaterialPageRoute(builder: (context) => const HomeScreen()),
                     );
                   },
                   child: Text('No', style: TextStyle(color: Colors.blue[800])),
@@ -164,8 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
         String? password = await _storage.read(key: 'password');
 
         if (email != null && password != null) {
-          if (email == _emailController.text &&
-              password == _passwordController.text) {
+          if (email == _emailController.text && password == _passwordController.text) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -193,7 +193,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _checkBiometrics() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-
+    if (!mounted) {
+      return;
+    }
     setState(() {
       biometrics = prefs.getBool('biometrics') ?? false;
     });
@@ -271,6 +273,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           suffixIcon: IconButton(
                             icon: const Icon(Icons.visibility),
                             onPressed: () {
+                              if (!mounted) {
+                                return;
+                              }
                               setState(() {
                                 _visibility = !_visibility;
                               });
@@ -352,8 +357,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Navigate to the SignUpScreen
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                          builder: (context) => const SignupScreen()),
+                      MaterialPageRoute(builder: (context) => const SignupScreen()),
                     );
                   },
                   child: Text(
