@@ -97,6 +97,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
   }
 
   void _toOption0() {
+    _gpsOn = false; // i think this is it!
     _gpsIcon = Icon(Icons.gps_off, color: Colors.red, size: 35);
     _currentOption = 0;
     if (!mounted) {
@@ -106,7 +107,9 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
   }
 
   void _toOption1() {
-    _gpsIcon = Icon(Icons.gps_not_fixed, color: Color.fromRGBO(129, 129, 129, 1), size: 35);
+    _gpsOn = true;
+    _gpsIcon = Icon(Icons.gps_not_fixed,
+        color: Color.fromRGBO(129, 129, 129, 1), size: 35);
     _currentOption = 1;
     _alignOnUpdate = AlignOnUpdate.never;
     if (!mounted) {
@@ -116,8 +119,10 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
   }
 
   void _toOption2(Position position) {
-    _mapController.move(LatLng(position.latitude, position.longitude), _mapController.camera.zoom);
-    _gpsIcon = Icon(Icons.gps_fixed, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
+    _mapController.move(LatLng(position.latitude, position.longitude),
+        _mapController.camera.zoom);
+    _gpsIcon =
+        Icon(Icons.gps_fixed, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
     _currentOption = 2;
     _alignOnUpdate = AlignOnUpdate.never;
     if (!mounted) {
@@ -127,8 +132,10 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
   }
 
   void _toOption3(Position position) {
-    _mapController.moveAndRotate(LatLng(position.latitude, position.longitude), 17.0, _mapController.camera.rotation);
-    _gpsIcon = Icon(Icons.explore, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
+    _mapController.moveAndRotate(LatLng(position.latitude, position.longitude),
+        17.0, _mapController.camera.rotation);
+    _gpsIcon =
+        Icon(Icons.explore, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
     _currentOption = 3;
     _alignOnUpdate = AlignOnUpdate.always;
     if (!mounted) {
@@ -143,14 +150,18 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
       if (permission == LocationPermission.denied) {
         _gpsOn = false;
         _toOption0();
-      } else if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-        Position position = await Geolocator.getCurrentPosition(locationSettings: LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 10));
+      } else if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        Position position = await Geolocator.getCurrentPosition(
+            locationSettings: LocationSettings(
+                accuracy: LocationAccuracy.best, distanceFilter: 10));
         center = LatLng(position.latitude, position.longitude);
         _gpsOn = true;
         _toOption2(position);
       } else if (permission == LocationPermission.deniedForever) {
         _gpsOn = false;
-        _showLocationDialog("Please enable location services to use this feature.");
+        _showLocationDialog(
+            "Please enable location services to use this feature.");
       }
     } catch (e) {
       _gpsOn = false;
@@ -159,29 +170,33 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
   }
 
   void _listenToLocationServiceStatus() async {
-    _locationServiceStatusStream = Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
+    _locationServiceStatusStream =
+        Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
       if (status == ServiceStatus.disabled) {
+        _gpsOn = false;
         if (_currentOption != 0) {
           _toOption0();
         }
       } else if (status == ServiceStatus.enabled) {
+        _gpsOn = true;
         if (_currentOption == 0) {
-          _gpsOn = true;
           _toOption1();
         }
       }
-      // Está a rebentar aqui
     });
   }
 
   void _listenToConnectionServiceStatus() async {
-    _connectionServiceStatusStream = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
+    _connectionServiceStatusStream = Connectivity()
+        .onConnectivityChanged
+        .listen((List<ConnectivityResult> result) {
       if (!result.contains(ConnectivityResult.wifi) &&
           !result.contains(ConnectivityResult.mobile) &&
           !result.contains(ConnectivityResult.ethernet) &&
           !result.contains(ConnectivityResult.vpn)) {
         if (!_internetModal) {
-          _showConnectionDialog("You are offline. Using offline map data. When you are online the map will update.");
+          _showConnectionDialog(
+              "You are offline. Using offline map data. When you are online the map will update.");
           _internetModal = true;
         }
         if (!mounted) {
@@ -206,7 +221,10 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
     if (_gpsOn) {
       try {
         Position position = await Geolocator.getCurrentPosition(
-            locationSettings: LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 10, timeLimit: Duration(seconds: 3)));
+            locationSettings: LocationSettings(
+                accuracy: LocationAccuracy.best,
+                distanceFilter: 10,
+                timeLimit: Duration(seconds: 3)));
         if (_currentOption == 1) {
           _toOption2(position);
         } else if (_currentOption == 2) {
@@ -215,7 +233,12 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
           _toOption2(position);
         }
       } catch (e) {
-        return;
+        _gpsOn = false; // this too?
+        if (mounted) {
+          setState(() {});
+        }
+        _showLocationDialog(
+            "Unable to get current location. Please enable location services.");
       }
     } else {
       _requestLocationPermission();
@@ -239,7 +262,9 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
               minZoom: 7.0,
               maxZoom: 18.0,
               cameraConstraint: CameraConstraint.contain(
-                  bounds: LatLngBounds(LatLng(42.29301588859787, -6.047089196299635), LatLng(36.660350971821785, -10.027199015120786))),
+                  bounds: LatLngBounds(
+                      LatLng(42.29301588859787, -6.047089196299635),
+                      LatLng(36.660350971821785, -10.027199015120786))),
               keepAlive: true,
               onMapEvent: (MapEvent event) {
                 if (event is MapEventMoveStart) {
