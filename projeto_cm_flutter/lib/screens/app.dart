@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:projeto_cm_flutter/screens/bus_tracking_screen.dart';
+import 'package:projeto_cm_flutter/screens/map_screen.dart';
 import 'package:projeto_cm_flutter/screens/scan_qr_code_screen.dart';
 import 'package:projeto_cm_flutter/screens/nfc_screen.dart';
 import 'package:projeto_cm_flutter/screens/user_screen.dart';
