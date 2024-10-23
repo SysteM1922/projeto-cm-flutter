@@ -44,20 +44,27 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   geolocator: ^13.0.1
   http: ^1.2.2
-  isar: ^3.1.0+1
-  isar_flutter_libs: ^3.1.0+1
+  isar: 
+    version: ^3.1.0+1
+    hosted: https://pub.isar-community.dev/
+  isar_flutter_libs: 
+    version: ^3.1.0+1
+    hosted: https://pub.isar-community.dev/
   latlong2: ^0.9.1
   local_auth: ^2.3.0
   mobile_scanner: ^6.0.1
+  path_provider: ^2.1.4
   permission_handler: ^11.3.1
   shared_preferences: ^2.3.2
 
 dev_dependencies:
   build_runner: ^2.4.13
-  isar_generator: ^3.1.0+1
   flutter_lints: ^5.0.0
   flutter_test:
     sdk: flutter
+  isar_generator: 
+    version: ^3.1.0+1
+    hosted: https://pub.isar-community.dev/
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -6,9 +7,17 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:isar/isar.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:projeto_cm_flutter/isar/models.dart';
+
+import 'package:projeto_cm_flutter/isar/models.dart' as models;
 
 class BusTrackingScreen extends StatefulWidget {
   const BusTrackingScreen({super.key});
@@ -31,7 +40,11 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
   bool _internetModal = false;
   bool _locationModal = false;
 
+  FlutterSecureStorage _storage = FlutterSecureStorage();
+  String apiUrl = '';
+
   //bool isLoading = false;
+  bool _isUpdatingDataBase = false;
 
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
   StreamSubscription<List<ConnectivityResult>>? _connectionServiceStatusStream;
@@ -39,6 +52,10 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
+
+    apiUrl = dotenv.env['API_URL']!;
+
+    _checkDataBaseStatus();
 
     _listenToConnectionServiceStatus();
     _requestLocationPermission();
@@ -50,6 +67,100 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
     _locationServiceStatusStream?.cancel();
     _connectionServiceStatusStream?.cancel();
     super.dispose();
+  }
+
+  void _updateDataBase() async {
+    http.Response response = await http.get(Uri.parse('$apiUrl/system/last_update'));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> routes = json.decode(response.body)['routes'];
+      final List<dynamic> stops = json.decode(response.body)['stops'];
+      final List<dynamic> buses = json.decode(response.body)['buses'];
+      final List<dynamic> busStops = json.decode(response.body)['bus_stops'];
+      final String lastUpdate = json.decode(response.body)['last_updated'];
+
+      final dir = await getApplicationDocumentsDirectory();
+      final isar = await Isar.open(
+        [RouteSchema, StopSchema, BusSchema, BusStopSchema],
+        directory: dir.path,
+      );
+
+      await isar.writeTxn(() async {
+        await isar.routes.clear();
+        await isar.stops.clear();
+        await isar.bus.clear();
+        await isar.busStops.clear();
+      });
+
+      List<models.BusStop> busStopList = [];
+      for (var busStop in busStops) {
+        busStopList.add(models.BusStop.fromJson(busStop));
+      }
+
+      List<models.Route> routeList = [];
+      for (var route in routes) {
+        models.Route routeModel = models.Route.fromJson(route);
+        routeModel.busStops.addAll(busStopList.where((element) => element.routeId == routeModel.serverId));
+        routeList.add(routeModel);
+      }
+
+      List<models.Stop> stopList = [];
+      for (var stop in stops) {
+        models.Stop stopModel = models.Stop.fromJson(stop);
+        stopModel.busStops.addAll(busStopList.where((element) => element.stopId == stopModel.serverId));
+        stopList.add(stopModel);
+      }
+
+      List<models.Bus> busList = [];
+      for (var bus in buses) {
+        models.Bus busModel = models.Bus.fromJson(bus);
+        busModel.busStops.addAll(busStopList.where((element) => element.busId == busModel.serverId));
+        busList.add(busModel);
+      }
+
+      isar.writeTxn(() async {
+        isar.busStops.putAll(busStopList);
+        isar.routes.putAll(routeList);
+        isar.stops.putAll(stopList);
+        isar.bus.putAll(busList);
+      });
+
+      _storage.write(key: 'last_update', value: lastUpdate);
+
+      setState(() {
+        _isUpdatingDataBase = false;
+      });
+    } else {
+      _showConnectionDialog("Unable to connect to the server. Using offline map data.");
+    }
+  }
+
+  void _checkDataBaseStatus() async {
+    _connectionServiceStatusStream = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
+      if (!result.contains(ConnectivityResult.wifi) &&
+          !result.contains(ConnectivityResult.mobile) &&
+          !result.contains(ConnectivityResult.ethernet) &&
+          !result.contains(ConnectivityResult.vpn)) {
+        return;
+      }
+    });
+
+    var lastUpdate = await _storage.read(key: 'last_update');
+
+    lastUpdate ??= "1970-01-01 00:00:00.1";
+
+    http.Response response = await http.get(Uri.parse('$apiUrl/system/is_updated/$lastUpdate'));
+
+    if (response.statusCode == 200) {
+      _storage.write(key: 'last_update', value: DateTime.now().toIso8601String());
+    } else if (response.statusCode == 404) {
+      setState(() {
+        _isUpdatingDataBase = true;
+      });
+      _updateDataBase();
+    } else {
+      _showConnectionDialog("Unable to connect to the server. Using offline map data.");
+    }
   }
 
   void _showConnectionDialog(String message) {
@@ -356,6 +467,22 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
                 child: CircularProgressIndicator(),
               ),
             ),*/
+          if (_isUpdatingDataBase)
+            Container(
+              color: Colors.black45,
+              child: AlertDialog(
+                title: const Text('Database Update'),
+                content: const Text('The database is outdated. Wait while we update it.'),
+                actions: <Widget>[
+                  // add loading spinner
+                  Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.blue[800],
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

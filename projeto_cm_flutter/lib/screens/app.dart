@@ -56,7 +56,7 @@ class _AppState extends State<App> {
               ),
               Tab(
                 icon: Icon(Icons.qr_code),
-                text: 'QR Reader',
+                text: 'Scan QR',
                 iconMargin: EdgeInsets.only(bottom: 5.0),
               ),
               Tab(
