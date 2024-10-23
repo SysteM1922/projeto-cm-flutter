@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:projeto_cm_flutter/screens/home_screen.dart';
 import 'package:projeto_cm_flutter/screens/signup_screen.dart';
@@ -27,6 +30,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _visibility = false;
   bool biometrics = false;
+
+  String apiUrl = '';
+
+  @override
+  void initState() {
+    super.initState();
+
+    apiUrl = dotenv.env['API_URL']!;
+
+    _checkBiometrics();
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<bool> _authenticate() async {
     try {
@@ -114,7 +135,26 @@ class _LoginScreenState extends State<LoginScreen> {
       await _storage.write(key: 'email', value: email);
       await _storage.write(key: 'password', value: password);
 
-      log('$userCredential');
+      http.Response response = await http.post(
+        Uri.parse('$apiUrl/user/create'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, String>{
+          'username': userCredential.user!.displayName!,
+          'email': userCredential.user!.email!,
+          'firebase_uid': userCredential.user!.uid,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        await _storage.write(key: 'user_id', value: json.decode(response.body)['user_id'].toString());
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('An error occurred. Please try again.')),
+        );
+        return;
+      }
 
       if (!withBiometrics) {
         await showDialog<bool>(
@@ -203,20 +243,6 @@ class _LoginScreenState extends State<LoginScreen> {
     if (biometrics) {
       _bioLogin();
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-
-    _checkBiometrics();
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
   }
 
   @override

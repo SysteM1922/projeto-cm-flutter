@@ -4,6 +4,7 @@ import 'package:projeto_cm_flutter/screens/bus_tracking_screen.dart';
 import 'package:projeto_cm_flutter/screens/login_screen.dart';
 import 'package:projeto_cm_flutter/screens/nfc_screen.dart';
 import 'package:projeto_cm_flutter/screens/scan_qr_code_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,9 +14,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  
+  final _storage = FlutterSecureStorage();
+
   // Method to sign out
   void _signOut(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
+    await _storage.delete(key: 'user_id');
     // Navigate back to the LoginScreen
     Navigator.pushReplacement(
       context,

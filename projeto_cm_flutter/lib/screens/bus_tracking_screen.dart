@@ -3,6 +3,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -16,12 +17,11 @@ class BusTrackingScreen extends StatefulWidget {
   State<BusTrackingScreen> createState() => _BusTrackingScreenState();
 }
 
-class _BusTrackingScreenState extends State<BusTrackingScreen> {
+class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProviderStateMixin {
   Icon _wifiIcon = Icon(Icons.wifi, color: Color.fromRGBO(48, 170, 44, 1));
   Icon _gpsIcon = Icon(Icons.gps_off, color: Colors.red, size: 35);
 
-  final MapController _mapController = MapController();
-
+  late final AnimatedMapController _mapController = AnimatedMapController(vsync: this);
   LatLng center = LatLng(40.63672, -8.65049);
   AlignOnUpdate _alignOnUpdate = AlignOnUpdate.never;
 
@@ -29,8 +29,9 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
   bool _gpsOn = false;
 
   bool _internetModal = false;
+  bool _locationModal = false;
 
-  bool isLoading = false;
+  //bool isLoading = false;
 
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
   StreamSubscription<List<ConnectivityResult>>? _connectionServiceStatusStream;
@@ -72,6 +73,8 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
   }
 
   void _showLocationDialog(message) {
+    _locationModal = true;
+    setState(() {});
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -82,13 +85,17 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
-                await Geolocator.openLocationSettings();
+                _requestLocationPermission();
+                _locationModal = false;
+                setState(() {});
               },
               child: Text('Enable', style: TextStyle(color: Colors.blue[800])),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
+                _locationModal = false;
+                setState(() {});
               },
               child: Text('No', style: TextStyle(color: Colors.blue[800])),
             ),
@@ -99,7 +106,8 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
   }
 
   void _toOption0() {
-    _gpsOn = false; // i think this is it!
+    _alignOnUpdate = AlignOnUpdate.never;
+    _gpsOn = false;
     _gpsIcon = Icon(Icons.gps_off, color: Colors.red, size: 35);
     _currentOption = 0;
     if (!mounted) {
@@ -109,106 +117,92 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
   }
 
   void _toOption1() {
+    _alignOnUpdate = AlignOnUpdate.never;
     _gpsOn = true;
-    _gpsIcon = Icon(Icons.gps_not_fixed,
-        color: Color.fromRGBO(129, 129, 129, 1), size: 35);
+    _gpsIcon = Icon(Icons.gps_not_fixed, color: Color.fromRGBO(129, 129, 129, 1), size: 35);
     _currentOption = 1;
-    _alignOnUpdate = AlignOnUpdate.never;
     if (!mounted) {
       return;
     }
     setState(() {});
   }
 
-  void _toOption2(Position position) {
-    _mapController.move(LatLng(position.latitude, position.longitude),
-        _mapController.camera.zoom);
-    _gpsIcon =
-        Icon(Icons.gps_fixed, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
+  void _toOption2([Position? position]) async {
+    _alignOnUpdate = AlignOnUpdate.never;
+    _gpsOn = true;
+    _gpsIcon = Icon(Icons.gps_fixed, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
     _currentOption = 2;
-    _alignOnUpdate = AlignOnUpdate.never;
     if (!mounted) {
       return;
     }
     setState(() {});
+    position ??= await Geolocator.getCurrentPosition(locationSettings: LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 10));
+    _mapController.centerOnPoint(LatLng(position.latitude, position.longitude));
   }
 
-  void _toOption3(Position position) {
-    _mapController.moveAndRotate(LatLng(position.latitude, position.longitude),
-        17.0, _mapController.camera.rotation);
-    _gpsIcon =
-        Icon(Icons.explore, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
-    _currentOption = 3;
+  void _toOption3() async {
     _alignOnUpdate = AlignOnUpdate.always;
+    _gpsIcon = Icon(Icons.explore, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
+    _currentOption = 3;
     if (!mounted) {
       return;
     }
     setState(() {});
+    _mapController.animatedRotateTo(_mapController.mapController.camera.rotation);
+    _mapController.animatedZoomTo(18);
   }
 
   void _requestLocationPermission() async {
-    setState(() {
+    /*setState(() {
       isLoading = true;
-    });
+    });*/
     try {
       LocationPermission permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        _gpsOn = false;
         _toOption0();
-      } else if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        Position position = await Geolocator.getCurrentPosition(
-            locationSettings: LocationSettings(
-                accuracy: LocationAccuracy.best, distanceFilter: 10));
+      } else if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        Position position = await Geolocator.getCurrentPosition(locationSettings: LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 10));
         center = LatLng(position.latitude, position.longitude);
-        _gpsOn = true;
         _toOption2(position);
       } else if (permission == LocationPermission.deniedForever) {
         _gpsOn = false;
-        _showLocationDialog(
-            "Please enable location services to use this feature.");
+        _showLocationDialog("Please enable location services to use this feature.");
       }
     } catch (e) {
-      _gpsOn = false;
       _toOption0();
-    } finally {
+    } /*finally {
       setState(() {
         isLoading = false;
       });
-    }
+    } */
   }
 
   void _listenToLocationServiceStatus() {
-  _locationServiceStatusStream = Geolocator.getServiceStatusStream().listen(
-    (ServiceStatus status) {
-      if (status == ServiceStatus.disabled) {
-        _gpsOn = false;
-        if (_currentOption != 0) {
-          _toOption0();
+    _locationServiceStatusStream = Geolocator.getServiceStatusStream().listen(
+      (ServiceStatus status) {
+        if (status == ServiceStatus.disabled) {
+          if (_currentOption != 0) {
+            _toOption0();
+          }
+          // when disabled
+          //_showEnableLocationDialog();
+        } else if (status == ServiceStatus.enabled) {
+          if (_currentOption == 0) {
+            _toOption1();
+          }
         }
-        // when disabled 
-        _showEnableLocationDialog();
-      } else if (status == ServiceStatus.enabled) {
-        _gpsOn = true;
-        if (_currentOption == 0) {
-          _toOption1();
-        }
-      }
-    },
-  );
-}
+      },
+    );
+  }
 
   void _listenToConnectionServiceStatus() async {
-    _connectionServiceStatusStream = Connectivity()
-        .onConnectivityChanged
-        .listen((List<ConnectivityResult> result) {
+    _connectionServiceStatusStream = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
       if (!result.contains(ConnectivityResult.wifi) &&
           !result.contains(ConnectivityResult.mobile) &&
           !result.contains(ConnectivityResult.ethernet) &&
           !result.contains(ConnectivityResult.vpn)) {
         if (!_internetModal) {
-          _showConnectionDialog(
-              "You are offline. Using offline map data. When you are online the map will update.");
+          _showConnectionDialog("You are offline. Using offline map data. When you are online the map will update.");
           _internetModal = true;
         }
         if (!mounted) {
@@ -231,34 +225,28 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
 
   void _changeLocationOption() async {
     if (_gpsOn) {
-      setState(() {
+      /*setState(() {
         isLoading = true;
-      });
+      });*/
       try {
-        Position position = await Geolocator.getCurrentPosition(
-            locationSettings: LocationSettings(
-                accuracy: LocationAccuracy.best,
-                distanceFilter: 10,
-                timeLimit: Duration(seconds: 3)));
         if (_currentOption == 1) {
-          _toOption2(position);
+          _toOption2();
         } else if (_currentOption == 2) {
-          _toOption3(position);
+          _toOption3();
         } else if (_currentOption == 3) {
-          _toOption2(position);
+          _toOption2();
         }
       } catch (e) {
         _gpsOn = false;
         if (mounted) {
           setState(() {});
         }
-        _showLocationDialog(
-            "Unable to get current location. Please enable location services.");
-      } finally {
+        _showLocationDialog("Unable to get current location. Please enable location services.");
+      } /*finally {
         setState(() {
           isLoading = false;
         });
-      }
+      }*/
     } else {
       _showEnableLocationDialog();
     }
@@ -271,8 +259,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Location Services Disabled'),
-          content: Text(
-              'Location services are disabled. Would you like to enable them?'),
+          content: Text('Location services are disabled. Would you like to enable them?'),
           actions: [
             TextButton(
               onPressed: () async {
@@ -303,16 +290,14 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
       body: Stack(
         children: [
           FlutterMap(
-            mapController: _mapController,
+            mapController: _mapController.mapController,
             options: MapOptions(
               initialCenter: center,
-              initialZoom: 14.0,
+              initialZoom: 16.0,
               minZoom: 7.0,
               maxZoom: 18.0,
               cameraConstraint: CameraConstraint.contain(
-                  bounds: LatLngBounds(
-                      LatLng(42.29301588859787, -6.047089196299635),
-                      LatLng(36.660350971821785, -10.027199015120786))),
+                  bounds: LatLngBounds(LatLng(42.29301588859787, -6.047089196299635), LatLng(36.660350971821785, -10.027199015120786))),
               keepAlive: true,
               onMapEvent: (MapEvent event) {
                 if (event is MapEventMoveStart) {
@@ -368,13 +353,13 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> {
               child: _gpsIcon,
             ),
           ),
-          if (isLoading)
+          /*if (isLoading)
             Container(
               color: Colors.black45,
               child: const Center(
                 child: CircularProgressIndicator(),
               ),
-            ),
+            ),*/
         ],
       ),
     );

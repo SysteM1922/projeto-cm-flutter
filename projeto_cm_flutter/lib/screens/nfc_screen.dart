@@ -1,7 +1,9 @@
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_nfc_hce/flutter_nfc_hce.dart';
 import 'package:flutter_nfc_hce/flutter_nfc_hce_platform_interface.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class NFCScreen extends StatefulWidget {
   const NFCScreen({super.key});
@@ -12,6 +14,7 @@ class NFCScreen extends StatefulWidget {
 
 class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
   final FlutterNfcHce _flutterNfcHcePlugin = FlutterNfcHce();
+  final _storage = FlutterSecureStorage();
 
   void _showDialog(String message) {
     showDialog(
@@ -80,9 +83,9 @@ class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
 
   void _emulateNfcCard() async {
     //nfc content
-    var id = 'guilherme_antunes';
+    var id = await _storage.read(key: 'user_id');
 
-    await startNfcHce(id);
+    await startNfcHce(id ?? '0000000000000000');
   }
 
   void _stopNfcHce() async {
