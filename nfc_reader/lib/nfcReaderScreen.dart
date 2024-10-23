@@ -116,6 +116,7 @@ class _NFCReaderScreenState extends State<NFCReaderScreen> {
         if (payload.toString() != error.toString()) {
           //payload list index from 1 to list's length
           ndefContent = utf8.decode(Uint8List.fromList(payload.sublist(3)));
+
           if (ndefContent == '') {
             _alertPage(const UnrecognizedCardScreen());
             return;

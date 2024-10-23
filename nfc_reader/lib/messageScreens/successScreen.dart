@@ -13,6 +13,6 @@ class SuccessScreen extends StatefulWidget {
 class _SuccessScreenState extends State<SuccessScreen> {
   @override
   Widget build(BuildContext context) {
-    return BaseScreen(text: "Success", color: const Color.fromRGBO(0, 255, 0, 1), icon: Icons.check, secondColor: Colors.white, extraText: widget.extraText);
+    return BaseScreen(text: "Success", color: const Color.fromARGB(255, 45, 196, 45), icon: Icons.check, secondColor: Colors.white, extraText: widget.extraText);
   }
 }
