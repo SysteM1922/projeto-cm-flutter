@@ -122,24 +122,27 @@ class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Card Validation'),
-      ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
+          Container(
+            padding: const EdgeInsets.only(left: 20.0, right: 20.0, top: 60.0),
+            child: Text(
+              textAlign: TextAlign.center,
+              'Please tap your card on the NFC reader.',
+              style: TextStyle(fontSize: 24.0),
+            ),
+          ),
           Flexible(
               child: Container(
-                  margin: EdgeInsets.only(
-                      top: 20.0, left: 20.0, right: 20.0, bottom: 20.0),
+                  margin: EdgeInsets.only(top: 20.0, left: 20.0, right: 20.0, bottom: 20.0),
                   decoration: BoxDecoration(
                     boxShadow: [
                       BoxShadow(
                         color: Colors.grey.withOpacity(1),
                         spreadRadius: 0,
                         blurRadius: 5,
-                        offset:
-                            const Offset(10, 10), // changes position of shadow
+                        offset: const Offset(10, 10), // changes position of shadow
                       ),
                     ],
                     borderRadius: BorderRadius.circular(30.0),
@@ -150,14 +153,6 @@ class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
                       'assets/images/card.png',
                     ),
                   ))),
-          Container(
-            padding: const EdgeInsets.all(20.0),
-            child: Text(
-              textAlign: TextAlign.center,
-              'Please tap your card on the NFC reader.',
-              style: TextStyle(fontSize: 24.0),
-            ),
-          ),
         ],
       ),
     );

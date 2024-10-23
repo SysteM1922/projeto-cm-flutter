@@ -283,10 +283,6 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bus Tracking'),
-        backgroundColor: Colors.blue[800],
-      ),
       body: Stack(
         children: [
           FlutterMap(
@@ -328,7 +324,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
             ],
           ),
           Positioned(
-            top: 10,
+            top: 50,
             right: 10,
             child: ElevatedButton(
               onPressed: () => {},

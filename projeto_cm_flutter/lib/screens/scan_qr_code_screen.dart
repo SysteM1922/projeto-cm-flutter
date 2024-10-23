@@ -83,35 +83,56 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Scan QR Code"),
-        backgroundColor: Colors.blue[800],
-        actions: [
-          IconButton(
-            color: Colors.white,
-            icon: Icon(isTorchOn ? Icons.flash_on : Icons.flash_off),
-            onPressed: () {
-              cameraController.toggleTorch();
-              if (!mounted) {
-                return;
-              }
-              setState(() {
-                isTorchOn = !isTorchOn;
-              });
-            },
+      body: Stack(
+        children: [
+          MobileScanner(
+            controller: cameraController,
+            onDetect: _foundBarcode,
           ),
-          IconButton(
-            color: Colors.white,
-            icon: const Icon(Icons.cameraswitch),
-            onPressed: () {
-              cameraController.switchCamera();
-            },
+          Positioned(
+            top: 40,
+            right: 60,
+            child: IconButton(
+              color: Colors.white,
+              icon: Icon(
+                isTorchOn ? Icons.flash_on : Icons.flash_off,
+                shadows: [
+                  Shadow(
+                    color: Colors.black,
+                    offset: Offset(1, 1),
+                    blurRadius: 2,
+                  ),
+                ],
+              ),
+              onPressed: () {
+                cameraController.toggleTorch();
+                if (!mounted) {
+                  return;
+                }
+                setState(() {
+                  isTorchOn = !isTorchOn;
+                });
+              },
+            ),
           ),
+          Positioned(
+            top: 40,
+            right: 20,
+            child: IconButton(
+              color: Colors.white,
+              icon: const Icon(Icons.cameraswitch, shadows: [
+                Shadow(
+                  color: Colors.black,
+                  offset: Offset(1, 1),
+                  blurRadius: 2,
+                ),
+              ]),
+              onPressed: () {
+                cameraController.switchCamera();
+              },
+            ),
+          )
         ],
-      ),
-      body: MobileScanner(
-        controller: cameraController,
-        onDetect: _foundBarcode,
       ),
     );
   }

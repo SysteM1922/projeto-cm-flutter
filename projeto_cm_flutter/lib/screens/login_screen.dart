@@ -10,7 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-import 'package:projeto_cm_flutter/screens/home_screen.dart';
+import 'package:projeto_cm_flutter/screens/app.dart';
 import 'package:projeto_cm_flutter/screens/signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -81,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => const App()),
       );
     }
   }
@@ -104,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
           } else {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
+              MaterialPageRoute(builder: (context) => const App()),
             );
           }
         }
@@ -149,6 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.statusCode == 200) {
         await _storage.write(key: 'user_id', value: json.decode(response.body)['user_id'].toString());
+        await _storage.write(key: 'user_name', value: userCredential.user!.displayName!);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('An error occurred. Please try again.')),
@@ -170,7 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.pop(context, false);
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => const HomeScreen()),
+                      MaterialPageRoute(builder: (context) => const App()),
                     );
                   },
                   child: Text('No', style: TextStyle(color: Colors.blue[800])),
@@ -192,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(builder: (context) => const App()),
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -208,7 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
           if (email == _emailController.text && password == _passwordController.text) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
+              MaterialPageRoute(builder: (context) => const App()),
             );
             return;
           } else {

@@ -1,4 +1,3 @@
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,7 +10,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await dotenv.load(fileName: ".env");
-  
+
   await FMTCObjectBoxBackend().initialise();
   await FMTCStore('busMap').manage.create();
 
@@ -26,19 +25,22 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      systemNavigationBarColor: Colors.white,
+      systemNavigationBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
     ));
 
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
     ]);
 
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
     return MaterialApp(
-      title: 'Flutter Demo',
-      home: const LoginScreen(),
-      theme: ThemeData(
-        dialogBackgroundColor: Colors.white,
-      )
-    );
+        title: 'Flutter Demo',
+        home: const LoginScreen(),
+        theme: ThemeData(
+          dialogBackgroundColor: Colors.white,
+          scaffoldBackgroundColor: Colors.white,
+        ));
   }
 }
