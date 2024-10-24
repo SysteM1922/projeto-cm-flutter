@@ -1,6 +1,5 @@
 from sqlalchemy import DATETIME, Column, UUID, String, Integer, Float
 from uuid import uuid4
-from random import randint
 
 from app.database import Base
 
@@ -11,7 +10,7 @@ class User(Base):
     username = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
     firebase_uid = Column(String, index=True, unique=True, nullable=False)
-    card_number = Column(Integer, default=randint(1000000000000000, 9999999999999999), index=True, unique=True)
+    card_number = Column(Integer, index=True, unique=True)
 
 class Travel(Base):
     __tablename__ = "travels"

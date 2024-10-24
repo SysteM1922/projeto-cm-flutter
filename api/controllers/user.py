@@ -4,6 +4,7 @@ from fastapi import Depends
 from uuid import UUID
 from sqlalchemy.orm.session import Session
 from app.database import get_session
+from random import randint
 
 from app.models import User, TravelHistory, Travel
 from app.schemas import UserCreate
@@ -16,7 +17,11 @@ async def create_user(user_create: UserCreate, db: Session = Depends(get_session
     if user is not None:
         return {"user_id": user.id, "card_id": user.card_number}
     
-    new_user = User(username=user_create.username, email=user_create.email, firebase_uid=user_create.firebase_uid)
+    card_number = randint(1000000000000000, 9999999999999999)
+    while db.query(User).filter(User.card_number == card_number).first() is not None:
+        card_number = randint(1000000000000000, 9999999999999999)
+    
+    new_user = User(username=user_create.username, email=user_create.email, firebase_uid=user_create.firebase_uid, card_number=card_number)
 
     try:
         db.add(new_user)
