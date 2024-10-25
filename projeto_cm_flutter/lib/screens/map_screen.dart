@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -9,16 +8,13 @@ import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:isar/isar.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
-import 'package:projeto_cm_flutter/isar/models.dart';
-
 import 'package:projeto_cm_flutter/services/isar_service.dart'; // isar singleton 
+import 'package:projeto_cm_flutter/services/database_service.dart'; // DatabaseService to get the singleton instance
+
 class BusTrackingScreen extends StatefulWidget {
   const BusTrackingScreen({super.key});
 
@@ -28,7 +24,6 @@ class BusTrackingScreen extends StatefulWidget {
 
 class _BusTrackingScreenState extends State<BusTrackingScreen>
     with TickerProviderStateMixin {
-  Icon _wifiIcon = Icon(Icons.wifi, color: Color.fromRGBO(48, 170, 44, 1));
   Icon _gpsIcon = Icon(Icons.gps_off, color: Colors.red, size: 35);
 
   late final AnimatedMapController _mapController =
@@ -39,19 +34,14 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
   int _currentOption = 1;
   bool _gpsOn = false;
 
-  bool _internetModal = false;
-  bool _locationModal = false;
-
-  final FlutterSecureStorage _storage = FlutterSecureStorage();
   late String apiUrl;
-
-  bool _isUpdatingDataBase = false;
 
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
   StreamSubscription<List<ConnectivityResult>>? _connectionServiceStatusStream;
 
   List<Marker> _markersList = [];
 
+  final DatabaseService dbService = DatabaseService();
   late Isar isar;
 
   @override
@@ -61,9 +51,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
     apiUrl = dotenv.env['API_URL']!;
 
     _initializeIsar(); // Initialize Isar
-    _checkDataBaseStatus();
 
-    _listenToConnectionServiceStatus();
     _requestLocationPermission();
     _listenToLocationServiceStatus();
   }
@@ -80,19 +68,14 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
   }
 
   void _getMArkers() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final isar = await Isar.open(
-      [StopSchema, BusSchema, BusStopSchema, RouteSchema],
-      directory: dir.path,
-    );
 
-    List<Stop?> stops = await isar.stops.where().findAll();
+    List<models.Stop> stops = await isar.stops.where().findAll();
 
     for (var stop in stops) {
       _markersList.add(Marker(
         width: 40.0,
         height: 40.0,
-        point: LatLng(stop!.latitude!, stop.longitude!),
+        point: LatLng(stop.latitude!, stop.longitude!),
         child: Icon(
           Icons.location_on,
           color: Colors.red,
@@ -104,118 +87,12 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
     setState(() {});
   }
 
-  void _updateDataBase() async {
-    try {
-      final response = await http.get(Uri.parse('$apiUrl/system/last_update'));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List<dynamic> routes = data['routes'];
-        final List<dynamic> stops = data['stops'];
-        final List<dynamic> buses = data['buses'];
-        final List<dynamic> busStops = data['bus_stops'];
-        final String lastUpdate = data['last_updated'];
-
-        // acho q isto n é preciso
-        // ignore: unnecessary_null_comparison
-        if (isar == null) {
-          await _initializeIsar();
-        }
-
-        await isar.writeTxn(() async {
-          await isar.routes.clear();
-          await isar.stops.clear();
-          await isar.bus.clear();
-          await isar.busStops.clear();
-        });
-
-        
-        List<models.BusStop> busStopList = busStops.map((json) => models.BusStop.fromJson(json)).toList();
-
-        List<models.Route> routeList = routes.map((json) {
-          models.Route routeModel = models.Route.fromJson(json);
-          routeModel.busStops.addAll(busStopList.where((element) => element.routeId == routeModel.serverId));
-          return routeModel;
-        }).toList();
-
-        List<models.Stop> stopList = stops.map((json) {
-          models.Stop stopModel = models.Stop.fromJson(json);
-          stopModel.busStops.addAll(busStopList.where((element) => element.stopId == stopModel.serverId));
-          return stopModel;
-        }).toList();
-
-        List<models.Bus> busList = buses.map((json) {
-          models.Bus busModel = models.Bus.fromJson(json);
-          busModel.busStops.addAll(busStopList.where((element) => element.busId == busModel.serverId));
-          return busModel;
-        }).toList();
-
-        await isar.writeTxn(() async {
-          await isar.busStops.putAll(busStopList);
-          await isar.routes.putAll(routeList);
-          await isar.stops.putAll(stopList);
-          await isar.bus.putAll(busList);
-        });
-
-        await _storage.write(key: 'last_update', value: lastUpdate);
-
-        setState(() {
-          _isUpdatingDataBase = false;
-        });
-  
-      _getMArkers();
-    } else {
-        _showConnectionDialog(
-          "Unable to connect to the server. Using offline map data.");
-      }
-    } catch (e) {
-      _showConnectionDialog("Error updating database: $e");
-    }
-  }
-
-  void _checkDataBaseStatus() async {
-    _connectionServiceStatusStream = Connectivity()
-        .onConnectivityChanged
-        .listen((List<ConnectivityResult> result) {
-      if (!result.contains(ConnectivityResult.wifi) &&
-          !result.contains(ConnectivityResult.mobile) &&
-          !result.contains(ConnectivityResult.ethernet) &&
-          !result.contains(ConnectivityResult.vpn)) {
-        return;
-      }
-    });
-
-    var lastUpdate = await _storage.read(key: 'last_update');
-    lastUpdate ??= "1970-01-01 00:00:00.1";
-
-    try {
-      final response = await http.get(Uri.parse('$apiUrl/system/is_updated/$lastUpdate'));
-
-      if (response.statusCode == 200) {
-        await _storage.write(
-          key: 'last_update', value: DateTime.now().toIso8601String());
-        _getMArkers();
-    } else if (response.statusCode == 404) {
-        setState(() {
-          _isUpdatingDataBase = true;
-        });
-        _updateDataBase();
-      } else {
-        _showConnectionDialog(
-          "Unable to connect to the server. Using offline map data.");
-      }
-    } catch (e) {
-      _showConnectionDialog("Error checking database status: $e");
-    }
-  }
-
-
   void _showConnectionDialog(String message) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Internet Conection Error'),
+          title: const Text('Internet Connection Error'),
           content: Text(message),
           actions: <Widget>[
             TextButton(
@@ -231,7 +108,6 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
   }
 
   void _showLocationDialog(message) {
-    _locationModal = true;
     setState(() {});
     showDialog(
       context: context,
@@ -244,7 +120,6 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
               onPressed: () async {
                 Navigator.pop(context);
                 _requestLocationPermission();
-                _locationModal = false;
                 setState(() {});
               },
               child: Text('Enable', style: TextStyle(color: Colors.blue[800])),
@@ -252,7 +127,6 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                _locationModal = false;
                 setState(() {});
               },
               child: Text('No', style: TextStyle(color: Colors.blue[800])),
@@ -317,9 +191,6 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
   }
 
   void _requestLocationPermission() async {
-    /*setState(() {
-      isLoading = true;
-    });*/
     try {
       LocationPermission permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
@@ -338,11 +209,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
       }
     } catch (e) {
       _toOption0();
-    } /*finally {
-      setState(() {
-        isLoading = false;
-      });
-    } */
+    }
   }
 
   void _listenToLocationServiceStatus() {
@@ -352,8 +219,6 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
           if (_currentOption != 0) {
             _toOption0();
           }
-          // when disabled
-          //_showEnableLocationDialog();
         } else if (status == ServiceStatus.enabled) {
           if (_currentOption == 0) {
             _toOption1();
@@ -363,42 +228,8 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
     );
   }
 
-  void _listenToConnectionServiceStatus() async {
-    _connectionServiceStatusStream = Connectivity()
-        .onConnectivityChanged
-        .listen((List<ConnectivityResult> result) {
-      if (!result.contains(ConnectivityResult.wifi) &&
-          !result.contains(ConnectivityResult.mobile) &&
-          !result.contains(ConnectivityResult.ethernet) &&
-          !result.contains(ConnectivityResult.vpn)) {
-        if (!_internetModal) {
-          _showConnectionDialog(
-              "You are offline. Using offline map data. When you are online the map will update.");
-          _internetModal = true;
-        }
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _wifiIcon = Icon(Icons.wifi_off, color: Colors.red);
-        });
-        return;
-      }
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _internetModal = false;
-        _wifiIcon = Icon(Icons.wifi, color: Color.fromRGBO(48, 170, 44, 1));
-      });
-    });
-  }
-
   void _changeLocationOption() async {
     if (_gpsOn) {
-      /*setState(() {
-        isLoading = true;
-      });*/
       try {
         if (_currentOption == 1) {
           _toOption2();
@@ -414,11 +245,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
         }
         _showLocationDialog(
             "Unable to get current location. Please enable location services.");
-      } /*finally {
-        setState(() {
-          isLoading = false;
-        });
-      }*/
+      }
     } else {
       _showEnableLocationDialog();
     }
@@ -502,18 +329,6 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
             ],
           ),
           Positioned(
-            top: 50,
-            right: 10,
-            child: ElevatedButton(
-              onPressed: () => {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                padding: EdgeInsets.all(20),
-              ),
-              child: _wifiIcon,
-            ),
-          ),
-          Positioned(
             bottom: 20,
             right: 10,
             child: ElevatedButton(
@@ -527,30 +342,6 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
               child: _gpsIcon,
             ),
           ),
-          /*if (isLoading)
-            Container(
-              color: Colors.black45,
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
-            ),*/
-          if (_isUpdatingDataBase)
-            Container(
-              color: Colors.black45,
-              child: AlertDialog(
-                title: const Text('Database Update'),
-                content: const Text(
-                    'The database is outdated. Wait while we update it.'),
-                actions: <Widget>[
-                  // add loading spinner
-                  Center(
-                    child: CircularProgressIndicator(
-                      color: Colors.blue[800],
-                    ),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );

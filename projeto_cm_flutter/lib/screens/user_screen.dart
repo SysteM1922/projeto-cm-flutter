@@ -55,7 +55,7 @@ class _UserScreenState extends State<UserScreen> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               CircleAvatar(
-                backgroundColor: Colors.blue,
+                backgroundColor: Colors.blue[800],
                 radius: 60,
                 child: const Icon(Icons.person, size: 100),
               ),
