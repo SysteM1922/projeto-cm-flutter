@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -12,9 +13,12 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:isar/isar.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:projeto_cm_flutter/services/database_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:projeto_cm_flutter/isar/models.dart';
 
-import 'package:projeto_cm_flutter/services/isar_service.dart'; // isar singleton 
+import 'package:projeto_cm_flutter/isar/models.dart' as models;
+
 class BusTrackingScreen extends StatefulWidget {
   const BusTrackingScreen({super.key});
 
@@ -36,17 +40,14 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
   bool _internetModal = false;
   bool _locationModal = false;
 
-  final FlutterSecureStorage _storage = FlutterSecureStorage();
-  late String apiUrl;
+  FlutterSecureStorage _storage = FlutterSecureStorage();
+  String apiUrl = '';
 
+  //bool isLoading = false;
   bool _isUpdatingDataBase = false;
 
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
   StreamSubscription<List<ConnectivityResult>>? _connectionServiceStatusStream;
-
-  final DatabaseService dbService = DatabaseService();
-
-  late Isar isar;
 
   @override
   void initState() {
@@ -54,16 +55,11 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
 
     apiUrl = dotenv.env['API_URL']!;
 
-    _initializeIsar(); // Initialize Isar
     _checkDataBaseStatus();
 
     _listenToConnectionServiceStatus();
     _requestLocationPermission();
     _listenToLocationServiceStatus();
-  }
-
-  Future<void> _initializeIsar() async {
-    isar = await IsarService.getInstance(); // IsarService to get the singleton instance
   }
 
   @override
@@ -73,71 +69,71 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
     super.dispose();
   }
 
-  /* void _updateDataBase() async {
-    try {
-      final response = await http.get(Uri.parse('$apiUrl/system/last_update'));
+  void _updateDataBase() async {
+    http.Response response = await http.get(Uri.parse('$apiUrl/system/last_update'));
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List<dynamic> routes = data['routes'];
-        final List<dynamic> stops = data['stops'];
-        final List<dynamic> buses = data['buses'];
-        final List<dynamic> busStops = data['bus_stops'];
-        final String lastUpdate = data['last_updated'];
+    if (response.statusCode == 200) {
+      final List<dynamic> routes = json.decode(response.body)['routes'];
+      final List<dynamic> stops = json.decode(response.body)['stops'];
+      final List<dynamic> buses = json.decode(response.body)['buses'];
+      final List<dynamic> busStops = json.decode(response.body)['bus_stops'];
+      final String lastUpdate = json.decode(response.body)['last_updated'];
 
-        // acho q isto n é preciso
-        // ignore: unnecessary_null_comparison
-        if (isar == null) {
-          await _initializeIsar();
-        }
+      final dir = await getApplicationDocumentsDirectory();
+      final isar = await Isar.open(
+        [RouteSchema, StopSchema, BusSchema, BusStopSchema],
+        directory: dir.path,
+      );
 
-        await isar.writeTxn(() async {
-          await isar.routes.clear();
-          await isar.stops.clear();
-          await isar.bus.clear();
-          await isar.busStops.clear();
-        });
+      await isar.writeTxn(() async {
+        await isar.routes.clear();
+        await isar.stops.clear();
+        await isar.bus.clear();
+        await isar.busStops.clear();
+      });
 
-        
-        List<models.BusStop> busStopList = busStops.map((json) => models.BusStop.fromJson(json)).toList();
-
-        List<models.Route> routeList = routes.map((json) {
-          models.Route routeModel = models.Route.fromJson(json);
-          routeModel.busStops.addAll(busStopList.where((element) => element.routeId == routeModel.serverId));
-          return routeModel;
-        }).toList();
-
-        List<models.Stop> stopList = stops.map((json) {
-          models.Stop stopModel = models.Stop.fromJson(json);
-          stopModel.busStops.addAll(busStopList.where((element) => element.stopId == stopModel.serverId));
-          return stopModel;
-        }).toList();
-
-        List<models.Bus> busList = buses.map((json) {
-          models.Bus busModel = models.Bus.fromJson(json);
-          busModel.busStops.addAll(busStopList.where((element) => element.busId == busModel.serverId));
-          return busModel;
-        }).toList();
-
-        await isar.writeTxn(() async {
-          await isar.busStops.putAll(busStopList);
-          await isar.routes.putAll(routeList);
-          await isar.stops.putAll(stopList);
-          await isar.bus.putAll(busList);
-        });
-
-        await _storage.write(key: 'last_update', value: lastUpdate);
-
-        setState(() {
-          _isUpdatingDataBase = false;
-        });
-      } else {
-        _showConnectionDialog("Unable to connect to the server. Using offline map data.");
+      List<models.BusStop> busStopList = [];
+      for (var busStop in busStops) {
+        busStopList.add(models.BusStop.fromJson(busStop));
       }
-    } catch (e) {
-      _showConnectionDialog("Error updating database: $e");
+
+      List<models.Route> routeList = [];
+      for (var route in routes) {
+        models.Route routeModel = models.Route.fromJson(route);
+        routeModel.busStops.addAll(busStopList.where((element) => element.routeId == routeModel.serverId));
+        routeList.add(routeModel);
+      }
+
+      List<models.Stop> stopList = [];
+      for (var stop in stops) {
+        models.Stop stopModel = models.Stop.fromJson(stop);
+        stopModel.busStops.addAll(busStopList.where((element) => element.stopId == stopModel.serverId));
+        stopList.add(stopModel);
+      }
+
+      List<models.Bus> busList = [];
+      for (var bus in buses) {
+        models.Bus busModel = models.Bus.fromJson(bus);
+        busModel.busStops.addAll(busStopList.where((element) => element.busId == busModel.serverId));
+        busList.add(busModel);
+      }
+
+      isar.writeTxn(() async {
+        isar.busStops.putAll(busStopList);
+        isar.routes.putAll(routeList);
+        isar.stops.putAll(stopList);
+        isar.bus.putAll(busList);
+      });
+
+      _storage.write(key: 'last_update', value: lastUpdate);
+
+      setState(() {
+        _isUpdatingDataBase = false;
+      });
+    } else {
+      _showConnectionDialog("Unable to connect to the server. Using offline map data.");
     }
-  } */
+  }
 
   void _checkDataBaseStatus() async {
     _connectionServiceStatusStream = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
@@ -149,18 +145,22 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
       }
     });
 
-    dbService.isDatabaseUpdated().then((bool isUpdated) {
-      if (!isUpdated) {
-        setState(() {
-          _isUpdatingDataBase = true;
-        });
-        dbService.updateDatabase().then((_) {
-          setState(() {
-            _isUpdatingDataBase = false;
-          });
-        });
-      }
-    });
+    var lastUpdate = await _storage.read(key: 'last_update');
+
+    lastUpdate ??= "1970-01-01 00:00:00.1";
+
+    http.Response response = await http.get(Uri.parse('$apiUrl/system/is_updated/$lastUpdate'));
+
+    if (response.statusCode == 200) {
+      _storage.write(key: 'last_update', value: DateTime.now().toIso8601String());
+    } else if (response.statusCode == 404) {
+      setState(() {
+        _isUpdatingDataBase = true;
+      });
+      _updateDataBase();
+    } else {
+      _showConnectionDialog("Unable to connect to the server. Using offline map data.");
+    }
   }
 
   void _showConnectionDialog(String message) {
