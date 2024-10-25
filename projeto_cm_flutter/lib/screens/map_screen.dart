@@ -26,11 +26,13 @@ class BusTrackingScreen extends StatefulWidget {
   State<BusTrackingScreen> createState() => _BusTrackingScreenState();
 }
 
-class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProviderStateMixin {
+class _BusTrackingScreenState extends State<BusTrackingScreen>
+    with TickerProviderStateMixin {
   Icon _wifiIcon = Icon(Icons.wifi, color: Color.fromRGBO(48, 170, 44, 1));
   Icon _gpsIcon = Icon(Icons.gps_off, color: Colors.red, size: 35);
 
-  late final AnimatedMapController _mapController = AnimatedMapController(vsync: this);
+  late final AnimatedMapController _mapController =
+      AnimatedMapController(vsync: this);
   LatLng center = LatLng(40.63672, -8.65049);
   AlignOnUpdate _alignOnUpdate = AlignOnUpdate.never;
 
@@ -48,6 +50,8 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
 
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
   StreamSubscription<List<ConnectivityResult>>? _connectionServiceStatusStream;
+
+  List<Marker> _markersList = [];
 
   @override
   void initState() {
@@ -69,8 +73,34 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
     super.dispose();
   }
 
+  void _getMArkers() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final isar = await Isar.open(
+      [StopSchema, BusSchema, BusStopSchema, RouteSchema],
+      directory: dir.path,
+    );
+
+    List<Stop?> stops = await isar.stops.where().findAll();
+
+    for (var stop in stops) {
+      _markersList.add(Marker(
+        width: 40.0,
+        height: 40.0,
+        point: LatLng(stop!.latitude!, stop.longitude!),
+        child: Icon(
+          Icons.location_on,
+          color: Colors.red,
+          size: 40.0,
+        ),
+      ));
+    }
+
+    setState(() {});
+  }
+
   void _updateDataBase() async {
-    http.Response response = await http.get(Uri.parse('$apiUrl/system/last_update'));
+    http.Response response =
+        await http.get(Uri.parse('$apiUrl/system/last_update'));
 
     if (response.statusCode == 200) {
       final List<dynamic> routes = json.decode(response.body)['routes'];
@@ -100,21 +130,24 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
       List<models.Route> routeList = [];
       for (var route in routes) {
         models.Route routeModel = models.Route.fromJson(route);
-        routeModel.busStops.addAll(busStopList.where((element) => element.routeId == routeModel.serverId));
+        routeModel.busStops.addAll(busStopList
+            .where((element) => element.routeId == routeModel.serverId));
         routeList.add(routeModel);
       }
 
       List<models.Stop> stopList = [];
       for (var stop in stops) {
         models.Stop stopModel = models.Stop.fromJson(stop);
-        stopModel.busStops.addAll(busStopList.where((element) => element.stopId == stopModel.serverId));
+        stopModel.busStops.addAll(busStopList
+            .where((element) => element.stopId == stopModel.serverId));
         stopList.add(stopModel);
       }
 
       List<models.Bus> busList = [];
       for (var bus in buses) {
         models.Bus busModel = models.Bus.fromJson(bus);
-        busModel.busStops.addAll(busStopList.where((element) => element.busId == busModel.serverId));
+        busModel.busStops.addAll(
+            busStopList.where((element) => element.busId == busModel.serverId));
         busList.add(busModel);
       }
 
@@ -130,13 +163,18 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
       setState(() {
         _isUpdatingDataBase = false;
       });
+
+      _getMArkers();
     } else {
-      _showConnectionDialog("Unable to connect to the server. Using offline map data.");
+      _showConnectionDialog(
+          "Unable to connect to the server. Using offline map data.");
     }
   }
 
   void _checkDataBaseStatus() async {
-    _connectionServiceStatusStream = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
+    _connectionServiceStatusStream = Connectivity()
+        .onConnectivityChanged
+        .listen((List<ConnectivityResult> result) {
       if (!result.contains(ConnectivityResult.wifi) &&
           !result.contains(ConnectivityResult.mobile) &&
           !result.contains(ConnectivityResult.ethernet) &&
@@ -149,17 +187,21 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
 
     lastUpdate ??= "1970-01-01 00:00:00.1";
 
-    http.Response response = await http.get(Uri.parse('$apiUrl/system/is_updated/$lastUpdate'));
+    http.Response response =
+        await http.get(Uri.parse('$apiUrl/system/is_updated/$lastUpdate'));
 
     if (response.statusCode == 200) {
-      _storage.write(key: 'last_update', value: DateTime.now().toIso8601String());
+      _storage.write(
+          key: 'last_update', value: DateTime.now().toIso8601String());
+      _getMArkers();
     } else if (response.statusCode == 404) {
       setState(() {
         _isUpdatingDataBase = true;
       });
       _updateDataBase();
     } else {
-      _showConnectionDialog("Unable to connect to the server. Using offline map data.");
+      _showConnectionDialog(
+          "Unable to connect to the server. Using offline map data.");
     }
   }
 
@@ -230,7 +272,8 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
   void _toOption1() {
     _alignOnUpdate = AlignOnUpdate.never;
     _gpsOn = true;
-    _gpsIcon = Icon(Icons.gps_not_fixed, color: Color.fromRGBO(129, 129, 129, 1), size: 35);
+    _gpsIcon = Icon(Icons.gps_not_fixed,
+        color: Color.fromRGBO(129, 129, 129, 1), size: 35);
     _currentOption = 1;
     if (!mounted) {
       return;
@@ -241,25 +284,30 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
   void _toOption2([Position? position]) async {
     _alignOnUpdate = AlignOnUpdate.never;
     _gpsOn = true;
-    _gpsIcon = Icon(Icons.gps_fixed, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
+    _gpsIcon =
+        Icon(Icons.gps_fixed, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
     _currentOption = 2;
     if (!mounted) {
       return;
     }
     setState(() {});
-    position ??= await Geolocator.getCurrentPosition(locationSettings: LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 10));
+    position ??= await Geolocator.getCurrentPosition(
+        locationSettings: LocationSettings(
+            accuracy: LocationAccuracy.best, distanceFilter: 10));
     _mapController.centerOnPoint(LatLng(position.latitude, position.longitude));
   }
 
   void _toOption3() async {
     _alignOnUpdate = AlignOnUpdate.always;
-    _gpsIcon = Icon(Icons.explore, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
+    _gpsIcon =
+        Icon(Icons.explore, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
     _currentOption = 3;
     if (!mounted) {
       return;
     }
     setState(() {});
-    _mapController.animatedRotateTo(_mapController.mapController.camera.rotation);
+    _mapController
+        .animatedRotateTo(_mapController.mapController.camera.rotation);
     _mapController.animatedZoomTo(18);
   }
 
@@ -271,13 +319,17 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
       LocationPermission permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
         _toOption0();
-      } else if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-        Position position = await Geolocator.getCurrentPosition(locationSettings: LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 10));
+      } else if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        Position position = await Geolocator.getCurrentPosition(
+            locationSettings: LocationSettings(
+                accuracy: LocationAccuracy.best, distanceFilter: 10));
         center = LatLng(position.latitude, position.longitude);
         _toOption2(position);
       } else if (permission == LocationPermission.deniedForever) {
         _gpsOn = false;
-        _showLocationDialog("Please enable location services to use this feature.");
+        _showLocationDialog(
+            "Please enable location services to use this feature.");
       }
     } catch (e) {
       _toOption0();
@@ -307,13 +359,16 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
   }
 
   void _listenToConnectionServiceStatus() async {
-    _connectionServiceStatusStream = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
+    _connectionServiceStatusStream = Connectivity()
+        .onConnectivityChanged
+        .listen((List<ConnectivityResult> result) {
       if (!result.contains(ConnectivityResult.wifi) &&
           !result.contains(ConnectivityResult.mobile) &&
           !result.contains(ConnectivityResult.ethernet) &&
           !result.contains(ConnectivityResult.vpn)) {
         if (!_internetModal) {
-          _showConnectionDialog("You are offline. Using offline map data. When you are online the map will update.");
+          _showConnectionDialog(
+              "You are offline. Using offline map data. When you are online the map will update.");
           _internetModal = true;
         }
         if (!mounted) {
@@ -352,7 +407,8 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
         if (mounted) {
           setState(() {});
         }
-        _showLocationDialog("Unable to get current location. Please enable location services.");
+        _showLocationDialog(
+            "Unable to get current location. Please enable location services.");
       } /*finally {
         setState(() {
           isLoading = false;
@@ -370,7 +426,8 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Location Services Disabled'),
-          content: Text('Location services are disabled. Would you like to enable them?'),
+          content: Text(
+              'Location services are disabled. Would you like to enable them?'),
           actions: [
             TextButton(
               onPressed: () async {
@@ -404,7 +461,9 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
               minZoom: 7.0,
               maxZoom: 18.0,
               cameraConstraint: CameraConstraint.contain(
-                  bounds: LatLngBounds(LatLng(42.29301588859787, -6.047089196299635), LatLng(36.660350971821785, -10.027199015120786))),
+                  bounds: LatLngBounds(
+                      LatLng(42.29301588859787, -6.047089196299635),
+                      LatLng(36.660350971821785, -10.027199015120786))),
               keepAlive: true,
               onMapEvent: (MapEvent event) {
                 if (event is MapEventMoveStart) {
@@ -426,6 +485,9 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
                 ),
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.example.projeto_cm_flutter',
+              ),
+              MarkerLayer(
+                markers: _markersList,
               ),
               if (_gpsOn)
                 CurrentLocationLayer(
@@ -472,7 +534,8 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
               color: Colors.black45,
               child: AlertDialog(
                 title: const Text('Database Update'),
-                content: const Text('The database is outdated. Wait while we update it.'),
+                content: const Text(
+                    'The database is outdated. Wait while we update it.'),
                 actions: <Widget>[
                   // add loading spinner
                   Center(
