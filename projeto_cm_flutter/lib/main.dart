@@ -39,8 +39,8 @@ class MyApp extends StatelessWidget {
         title: 'Flutter Demo',
         home: const LoginScreen(),
         theme: ThemeData(
-          dialogBackgroundColor: Colors.white,
-          scaffoldBackgroundColor: Colors.white,
+          colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue)
+              .copyWith(secondary: Colors.blue[800]),
         ));
   }
 }

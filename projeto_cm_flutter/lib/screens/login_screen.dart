@@ -83,6 +83,10 @@ class _LoginScreenState extends State<LoginScreen> {
         context,
         MaterialPageRoute(builder: (context) => const App()),
       );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Biometric authentication failed. Maybe the bio-metrics are not set up.')),
+      );
     }
   }
 

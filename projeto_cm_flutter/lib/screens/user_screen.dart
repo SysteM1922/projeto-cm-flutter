@@ -39,7 +39,7 @@ class _UserScreenState extends State<UserScreen> {
   Future<void> _getUserInfo() async {
     String? userName = await _storage.read(key: "user_name");
     String? userId = await _storage.read(key: "user_id");
-    log('User Info: $userName, $userId');
+    
     setState(() {
       _userName = userName ?? 'UserName';
       _userId = userId ?? '';
@@ -85,8 +85,6 @@ class _UserScreenState extends State<UserScreen> {
       String endpoint = '$apiUrl/user/history/$_userId';
 
       final response = await http.get(Uri.parse(endpoint));
-
-      log('Response : ${response}');
 
       if (response.statusCode == 200) {
         List<dynamic> data = json.decode(utf8.decode(response.bodyBytes));
@@ -148,8 +146,8 @@ class _UserScreenState extends State<UserScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
-              const CircleAvatar(
-                backgroundColor: Colors.blue,
+              CircleAvatar(
+                backgroundColor: Colors.blue[800],
                 radius: 60,
                 child: Icon(Icons.person, size: 100),
               ),

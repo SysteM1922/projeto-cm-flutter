@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:developer';
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:isar/isar.dart';
 import 'package:projeto_cm_flutter/services/isar_service.dart'; // To get the Isar instance
@@ -27,72 +29,61 @@ class DatabaseService {
   }
 
   Future<models.Stop?> getStopById(String stopId) async {
-    return await isar.stops
-        .filter()
-        .serverIdEqualTo(stopId)
-        .findFirst();
+    return await isar.stops.filter().serverIdEqualTo(stopId).findFirst();
   }
 
   Future<List<models.BusStop>> getBusStopsByStopId(String stopId) async {
-    return await isar.busStops
-        .filter()
-        .stopIdEqualTo(stopId)
-        .findAll();
+    return await isar.busStops.filter().stopIdEqualTo(stopId).findAll();
+  }
+
+  Future<List<models.Route>> getAllStops() async {
+    return await isar.routes.where().findAll();
   }
 
   Future<models.Route?> getRouteById(String routeId) async {
-    return await isar.routes
-        .filter()
-        .serverIdEqualTo(routeId)
-        .findFirst();
+    return await isar.routes.filter().serverIdEqualTo(routeId).findFirst();
   }
 
   Future<List<models.BusStop>> getBusStopsByRouteId(String routeId) async {
-    return await isar.busStops
-        .filter()
-        .routeIdEqualTo(routeId)
-        .findAll();
+    return await isar.busStops.filter().routeIdEqualTo(routeId).findAll();
   }
 
   Future<models.Bus?> getBusById(String busId) async {
-    return await isar.bus
-        .filter()
-        .serverIdEqualTo(busId)
-        .findFirst();
+    return await isar.bus.filter().serverIdEqualTo(busId).findFirst();
   }
 
   Future<models.Stop?> getStopByServerId(String stopId) async {
-    return await isar.stops
-        .filter()
-        .serverIdEqualTo(stopId)
-        .findFirst();
+    return await isar.stops.filter().serverIdEqualTo(stopId).findFirst();
   }
 
-  Future<bool> isDatabaseUpdated() async {
+  Future<int> isDatabaseUpdated() async {
     String? lastUpdate = await _storage.read(key: 'last_update');
     lastUpdate ??= "1970-01-01 00:00:00.1";
 
     // check if the data is up-to-date
     try {
-      final response = await http.get(Uri.parse('$apiUrl/system/last_update'));
+      final response =
+          await http.get(Uri.parse('$apiUrl/system/is_updated/$lastUpdate'));
 
       if (response.statusCode == 200) {
         // Data is up-to-date
-        await _storage.write(key: 'last_update', value: DateTime.now().toIso8601String());
-        return true;
+        await _storage.write(
+            key: 'last_update', value: DateTime.now().toIso8601String());
+        return 200;
       } else if (response.statusCode == 404) {
         // Data is outdated
-        return false;
+        return 404;
       } else {
         // Some error occurred
-        return false;
+        return 500;
       }
     } catch (e) {
       // Error occurred
-      return false;
+      return 500;
     }
   }
-Future<void> updateDatabase() async {
+
+  Future<void> updateDatabase(VoidCallback onComplete) async {
     try {
       final response = await http.get(Uri.parse('$apiUrl/system/last_update'));
 
@@ -118,23 +109,27 @@ Future<void> updateDatabase() async {
         });
 
         // Parse and insert data
-        List<models.BusStop> busStopList = busStops.map((json) => models.BusStop.fromJson(json)).toList();
+        List<models.BusStop> busStopList =
+            busStops.map((json) => models.BusStop.fromJson(json)).toList();
 
         List<models.Route> routeList = routes.map((json) {
           models.Route routeModel = models.Route.fromJson(json);
-          routeModel.busStops.addAll(busStopList.where((element) => element.routeId == routeModel.serverId));
+          routeModel.busStops.addAll(busStopList
+              .where((element) => element.routeId == routeModel.serverId));
           return routeModel;
         }).toList();
 
         List<models.Stop> stopList = stops.map((json) {
           models.Stop stopModel = models.Stop.fromJson(json);
-          stopModel.busStops.addAll(busStopList.where((element) => element.stopId == stopModel.serverId));
+          stopModel.busStops.addAll(busStopList
+              .where((element) => element.stopId == stopModel.serverId));
           return stopModel;
         }).toList();
 
         List<models.Bus> busList = buses.map((json) {
           models.Bus busModel = models.Bus.fromJson(json);
-          busModel.busStops.addAll(busStopList.where((element) => element.busId == busModel.serverId));
+          busModel.busStops.addAll(busStopList
+              .where((element) => element.busId == busModel.serverId));
           return busModel;
         }).toList();
 
@@ -149,11 +144,14 @@ Future<void> updateDatabase() async {
         await _storage.write(key: 'last_update', value: lastUpdate);
       } else {
         // Handle error
-        throw Exception('Failed to update database. Status code: ${response.statusCode}');
+        throw Exception(
+            'Failed to update database. Status code: ${response.statusCode}');
       }
     } catch (e) {
       // Handle error
       throw Exception('Error updating database: $e');
+    } finally {
+      onComplete();
     }
   }
 }
