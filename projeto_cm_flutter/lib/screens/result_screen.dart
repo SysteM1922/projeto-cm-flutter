@@ -1,84 +1,74 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:projeto_cm_flutter/screens/route_screen.dart';
+import 'package:projeto_cm_flutter/services/database_service.dart'; 
+
+import 'package:projeto_cm_flutter/isar/models.dart' as models;
 
 class ResultScreen extends StatefulWidget {
-  final String code;
+  final models.Stop stop;
   final VoidCallback screenClosed;
 
-  const ResultScreen({super.key, required this.code, required this.screenClosed});
+  const ResultScreen({Key? key, required this.stop, required this.screenClosed}) : super(key: key);
 
   @override
   _ResultScreenState createState() => _ResultScreenState();
 }
 
 class _ResultScreenState extends State<ResultScreen> {
-  List<dynamic>? arrivalTimes;
+  List<models.BusStop> arrivalTimes = [];
   bool isLoading = true;
-  String stopName = "Loading...";
+
+  final DatabaseService dbService = DatabaseService();
 
   @override
   void initState() {
     super.initState();
+
+    // print("Stop_id: ${widget.stop.serverId}");
+
     fetchBusSchedules();
   }
 
   Future<void> fetchBusSchedules() async {
-    final Uri url = Uri.parse(widget.code);
-
     try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        var data = json.decode(utf8.decode(response.bodyBytes));
+      // Query bus stops associated with the stop's serverId
+      final List<models.BusStop> busStops = await dbService.getBusStopsByStopId(widget.stop.serverId ?? '');
 
-        // Process arrival times to keep only the earliest arrival for each bus_id
-        List<dynamic> processedArrivalTimes = processArrivalTimes(data['arrival_times']);
+      // Process arrival times to keep only the earliest arrival for each bus_id
+      List<models.BusStop> processedArrivalTimes = processArrivalTimes(busStops);
 
-        // get stop_name and arrival_times from the response
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          stopName = data['stop_name'];
-          arrivalTimes = processedArrivalTimes;
-          isLoading = false;
-        });
-      } else {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          arrivalTimes = null;
-          isLoading = false;
-        });
-        debugPrint("Failed to fetch bus schedules. Status code: ${response.statusCode}");
+      if (!mounted) {
+        return;
       }
+      setState(() {
+        arrivalTimes = processedArrivalTimes;
+        isLoading = false;
+      });
     } catch (e) {
       if (!mounted) {
         return;
       }
       setState(() {
-        arrivalTimes = null;
+        arrivalTimes = [];
         isLoading = false;
       });
       debugPrint("Error fetching bus schedules: $e");
     }
   }
 
-  // Function to process arrival times
-  List<dynamic> processArrivalTimes(List<dynamic> arrivalTimes) {
-    Map<String, dynamic> busSchedules = {};
+  List<models.BusStop> processArrivalTimes(List<models.BusStop> busStops) {
+    Map<String, models.BusStop> busSchedules = {};
 
-    for (var schedule in arrivalTimes) {
-      String busId = schedule['bus_id'].toString();
-      String arrivalTimeStr = schedule['arrival_time'];
+    for (var schedule in busStops) {
+      String busId = schedule.busId ?? '';
+      DateTime? arrivalTime = schedule.arrivalTime;
 
-      // Parse the arrival time into DateTime
-      DateTime arrivalTime = DateTime.parse(arrivalTimeStr);
+      if (arrivalTime == null || busId.isEmpty) continue;
 
       if (busSchedules.containsKey(busId)) {
-        DateTime existingArrivalTime = DateTime.parse(busSchedules[busId]['arrival_time']);
+        DateTime existingArrivalTime = busSchedules[busId]!.arrivalTime!;
         // Keep the schedule with the earliest arrival time
         if (arrivalTime.isBefore(existingArrivalTime)) {
           busSchedules[busId] = schedule;
@@ -87,18 +77,28 @@ class _ResultScreenState extends State<ResultScreen> {
         busSchedules[busId] = schedule;
       }
     }
-
     // Convert the busSchedules map values to a list
-    List<dynamic> processedList = busSchedules.values.toList();
+    List<models.BusStop> processedList = busSchedules.values.toList();
 
     // Sort the list by arrival time
-    processedList.sort((a, b) => a['arrival_time'].compareTo(b['arrival_time']));
+    processedList.sort((a, b) => a.arrivalTime!.compareTo(b.arrivalTime!));
 
     return processedList;
   }
 
   @override
+  void dispose() {
+    // Do not close Isar instance
+    widget.screenClosed();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    String stopName = widget.stop.stopName != null
+        ? utf8.decode(widget.stop.stopName!.runes.toList())
+        : 'Stop';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Stop Schedule"),
@@ -113,7 +113,7 @@ class _ResultScreenState extends State<ResultScreen> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : arrivalTimes != null
+          : arrivalTimes.isNotEmpty
               ? Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -130,47 +130,51 @@ class _ResultScreenState extends State<ResultScreen> {
                       ),
                       const SizedBox(height: 16),
                       Expanded(
-                        child: arrivalTimes!.isNotEmpty
-                            ? ListView.builder(
-                                itemCount: arrivalTimes!.length,
-                                itemBuilder: (context, index) {
-                                  final schedule = arrivalTimes![index];
-                                  return _buildBusScheduleCard(schedule);
-                                },
-                              )
-                            : const Center(child: Text("No buses scheduled for this stop.")),
+                        child: ListView.builder(
+                          itemCount: arrivalTimes.length,
+                          itemBuilder: (context, index) {
+                            final schedule = arrivalTimes[index];
+                            return _buildBusScheduleCard(schedule);
+                          },
+                        ),
                       ),
                     ],
                   ),
                 )
-              : const Center(child: Text("Failed to load schedule.")),
+              : const Center(child: Text("No buses scheduled for this stop.")),
     );
   }
 
-  Widget _buildBusScheduleCard(dynamic schedule) {
-    String arrivalTime = schedule['arrival_time'].substring(11, 16);
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15.0),
-      ),
-      elevation: 5,
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+  Widget _buildBusScheduleCard(models.BusStop schedule) {
+    String arrivalTime = schedule.arrivalTime?.toLocal().toString().substring(11, 16) ?? '--:--';
+    String routeNumber = '';
+
+    return FutureBuilder<models.Route?>(
+      future: dbService.getRouteById(schedule.routeId ?? ''),
+      builder: (context, snapshot) {
+        if (snapshot.hasData && snapshot.data != null) {
+          routeNumber = snapshot.data!.routeNumber?.toString() ?? '';
+        }
+
+        return Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.0),
+          ),
+          elevation: 5,
+          margin: const EdgeInsets.symmetric(vertical: 10),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.directions_bus, size: 40, color: Colors.blue),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Route: ${schedule['route_number']}",
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.directions_bus, size: 40, color: Colors.blue),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        "Route: $routeNumber",
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -178,47 +182,47 @@ class _ResultScreenState extends State<ResultScreen> {
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 5),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const SizedBox(width: 8),
-                    const Icon(Icons.access_time, color: Colors.green),
-                    const SizedBox(width: 5),
-                    Text(
-                      arrivalTime,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
-                      ),
                     ),
                   ],
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => RouteScreen(routeId: schedule['route_id']),
-                      ),
-                    );
-                  },
-                  child: const Text("View Details"),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const SizedBox(width: 8),
+                        const Icon(Icons.access_time, color: Colors.green),
+                        const SizedBox(width: 5),
+                        Text(
+                          arrivalTime,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                RouteScreen(routeId: schedule.routeId ?? ''),
+                          ),
+                        );
+                      },
+                      child: const Text("View Details"),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

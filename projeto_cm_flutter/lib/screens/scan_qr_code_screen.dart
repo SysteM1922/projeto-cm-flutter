@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:projeto_cm_flutter/screens/result_screen.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+import 'package:projeto_cm_flutter/isar/models.dart' as models;
+import 'package:projeto_cm_flutter/services/database_service.dart'; 
 
 class ScanQRCodeScreen extends StatefulWidget {
   const ScanQRCodeScreen({super.key});
@@ -16,34 +18,56 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
   bool isTorchOn = false;
   bool _isDialogOpen = false;
 
+  final DatabaseService dbService = DatabaseService();
+
   @override
   void initState() {
     super.initState();
-    dotenv.load();
   }
 
-  void _foundBarcode(BarcodeCapture barcodeCapture) {
+  void _foundBarcode(BarcodeCapture barcodeCapture) async {
     final List<Barcode> barcodes = barcodeCapture.barcodes;
     if (!_screenOpened && barcodes.isNotEmpty) {
       final String code = barcodes.first.rawValue ?? '---';
       debugPrint('Barcode found! $code');
-      final String apiUrl = dotenv.env['API_URL'] ?? '';
 
-      // Validate if the scanned code starts with the API_URL
-      if (code.startsWith(apiUrl)) {
+      // Assume the QR code contains the stop_id
+      final String stopId = code.trim();
+
+      if (stopId.isEmpty) {
+        if (!_isDialogOpen) {
+          _showInvalidStopIdDialog();
+        }
+        return;
+      }
+
+      // check if its a URL
+      if (stopId.startsWith('http')) {
+        if (!_isDialogOpen) {
+          _showInvalidStopIdDialog();
+        }
+        return;
+      }
+
+      // Query the database for the stop with the given stopId
+      final models.Stop? stop = await dbService.getStopById(stopId);
+
+      if (stop != null) {
         _screenOpened = true;
+        // Pass the stop data to the ResultScreen
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => ResultScreen(
-              code: code,
+              stop: stop,
               screenClosed: _screenWasClosed,
             ),
           ),
         );
-      } else if (!_isDialogOpen) {
-        // Show error if the scanned code doesn't match the API_URL and no dialog is open
-        _showInvalidUrlDialog();
+      } else {
+        if (!_isDialogOpen) {
+          _showStopNotFoundDialog();
+        }
       }
     }
   }
@@ -52,14 +76,37 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
     _screenOpened = false;
   }
 
-  void _showInvalidUrlDialog() {
+  void _showInvalidStopIdDialog() {
     _isDialogOpen = true;
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text("Invalid QR Code"),
-          content: const Text("The scanned QR code is invalid. Please scan a valid URL."),
+          content:
+              const Text("The scanned QR code is invalid. Please scan a valid stop QR code."),
+          actions: [
+            TextButton(
+              child: const Text("OK"),
+              onPressed: () {
+                _isDialogOpen = false;
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showStopNotFoundDialog() {
+    _isDialogOpen = true;
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Stop Not Found"),
+          content: const Text("The stop ID scanned does not exist in the local database."),
           actions: [
             TextButton(
               child: const Text("OK"),
@@ -77,6 +124,7 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
   @override
   void dispose() {
     cameraController.dispose();
+    // DO NOT CLOSE ISAR HERE
     super.dispose();
   }
 
