@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -13,8 +12,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:isar/isar.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:http/http.dart' as http;
-import 'package:projeto_cm_flutter/isar/models.dart' as models;
+import 'package:projeto_cm_flutter/services/database_service.dart';
 
 import 'package:projeto_cm_flutter/services/isar_service.dart'; // isar singleton 
 class BusTrackingScreen extends StatefulWidget {
@@ -46,6 +44,8 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
   StreamSubscription<List<ConnectivityResult>>? _connectionServiceStatusStream;
 
+  final DatabaseService dbService = DatabaseService();
+
   late Isar isar;
 
   @override
@@ -73,7 +73,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
     super.dispose();
   }
 
-  void _updateDataBase() async {
+  /* void _updateDataBase() async {
     try {
       final response = await http.get(Uri.parse('$apiUrl/system/last_update'));
 
@@ -137,7 +137,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
     } catch (e) {
       _showConnectionDialog("Error updating database: $e");
     }
-  }
+  } */
 
   void _checkDataBaseStatus() async {
     _connectionServiceStatusStream = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) {
@@ -149,27 +149,19 @@ class _BusTrackingScreenState extends State<BusTrackingScreen> with TickerProvid
       }
     });
 
-    var lastUpdate = await _storage.read(key: 'last_update');
-    lastUpdate ??= "1970-01-01 00:00:00.1";
-
-    try {
-      final response = await http.get(Uri.parse('$apiUrl/system/is_updated/$lastUpdate'));
-
-      if (response.statusCode == 200) {
-        await _storage.write(key: 'last_update', value: DateTime.now().toIso8601String());
-      } else if (response.statusCode == 404) {
+    dbService.isDatabaseUpdated().then((bool isUpdated) {
+      if (!isUpdated) {
         setState(() {
           _isUpdatingDataBase = true;
         });
-        _updateDataBase();
-      } else {
-        _showConnectionDialog("Unable to connect to the server. Using offline map data.");
+        dbService.updateDatabase().then((_) {
+          setState(() {
+            _isUpdatingDataBase = false;
+          });
+        });
       }
-    } catch (e) {
-      _showConnectionDialog("Error checking database status: $e");
-    }
+    });
   }
-
 
   void _showConnectionDialog(String message) {
     showDialog(
