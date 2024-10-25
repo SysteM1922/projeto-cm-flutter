@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:isar/isar.dart';
@@ -9,23 +10,18 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class DatabaseService {
-  static final DatabaseService _instance = DatabaseService._internal();
+  static DatabaseService? _instance;
 
-  late Isar isar;
+  final Isar isar = IsarService().isar;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   late String apiUrl;
 
-  factory DatabaseService() {
-    return _instance;
-  }
-
   DatabaseService._internal() {
     apiUrl = dotenv.env['API_URL'] ?? '';
-    _initializeIsar();
   }
 
-  Future<void> _initializeIsar() async {
-    isar = await IsarService.getInstance();
+  static DatabaseService getInstance() {
+    return _instance ??= DatabaseService._internal();
   }
 
   Future<models.Stop?> getStopById(String stopId) async {
@@ -94,11 +90,6 @@ class DatabaseService {
         final List<dynamic> buses = data['buses'];
         final List<dynamic> busStops = data['bus_stops'];
         final String lastUpdate = data['last_updated'];
-
-        // Ensure Isar is initialized
-        if (isar == null) {
-          await _initializeIsar();
-        }
 
         // Clear existing data
         await isar.writeTxn(() async {

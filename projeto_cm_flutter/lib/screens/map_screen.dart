@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
+import 'package:projeto_cm_flutter/screens/schedule_screen.dart';
 import 'package:projeto_cm_flutter/services/database_service.dart'; // DatabaseService to get the singleton instance
 
 class BusTrackingScreen extends StatefulWidget {
@@ -21,8 +23,7 @@ class BusTrackingScreen extends StatefulWidget {
 
 class _BusTrackingScreenState extends State<BusTrackingScreen>
     with TickerProviderStateMixin {
-  
-  final DatabaseService dbService = DatabaseService();
+  final DatabaseService dbService = DatabaseService.getInstance();
 
   Icon _gpsIcon = Icon(Icons.gps_off, color: Colors.red, size: 35);
 
@@ -33,19 +34,22 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
 
   int _currentOption = 1;
   bool _gpsOn = false;
+  bool _mapInfo = false;
+  bool _moving = false;
+  late Widget _info;
+  late models.Stop _selectedStop;
 
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
   StreamSubscription<List<ConnectivityResult>>? _connectionServiceStatusStream;
 
   List<Marker> _markersList = [];
 
-
   @override
   void initState() {
     super.initState();
 
-    _getMArkers();
-    
+    _getMarkers();
+
     _requestLocationPermission();
     _listenToLocationServiceStatus();
   }
@@ -57,19 +61,58 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
     super.dispose();
   }
 
-  Future<void> _getMArkers() async {
+  void _markerTapped(models.Stop stop) {
+    _info = Text(
+      utf8.decode(stop.stopName!.codeUnits),
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+    _moving = true;
+    _mapInfo = true;
+    _selectedStop = stop;
+    setState(() {});
+    _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
+    Future.delayed(Duration(milliseconds: 600), () {
+      _moving = false;
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  Future<void> _getMarkers() async {
     List<models.Stop> stops = await dbService.getAllStops();
 
     for (var stop in stops) {
+      if (stop.latitude == null || stop.longitude == null) {
+        continue;
+      }
       _markersList.add(Marker(
         width: 40.0,
         height: 40.0,
         point: LatLng(stop.latitude!, stop.longitude!),
-        child: Icon(
-          Icons.location_on,
-          color: Colors.red,
-          size: 40.0,
+        child: GestureDetector(
+          onTap: () {
+            _markerTapped(stop);
+          },
+          child: Icon(
+            Icons.location_on,
+            color: Colors.red,
+            size: 40.0,
+            shadows: [
+              Shadow(
+                color: Colors.black,
+                offset: Offset(1, 1),
+                blurRadius: 2,
+              ),
+            ],
+          ),
         ),
+        alignment: Alignment(0, -1.0),
+        rotate: true,
       ));
     }
 
@@ -272,6 +315,12 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
                     _toOption1();
                   }
                 }
+                if (!_moving && _mapInfo) {
+                  _mapInfo = false;
+                  if (mounted) {
+                    setState(() {});
+                  }
+                }
               },
             ),
             children: [
@@ -312,6 +361,38 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
               child: _gpsIcon,
             ),
           ),
+          if (_mapInfo)
+            Positioned(
+              bottom: 100,
+              left: 10,
+              right: 10,
+              child: ElevatedButton(
+                onPressed: () {
+                  _mapInfo = false;
+                  if (mounted) {
+                    setState(() {});
+                  }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ScheduleScreen(
+                        stop: _selectedStop,
+                        screenClosed: () {},
+                      ),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.all(20),
+                  elevation: 5,
+                  side: BorderSide(color: Colors.grey, width: 1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20.0),
+                  ),
+                ),
+                child: _info,
+              ),
+            ),
         ],
       ),
     );

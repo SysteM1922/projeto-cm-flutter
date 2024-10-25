@@ -18,8 +18,8 @@ class Stop {
     final stop = Stop()
       ..serverId = json['id']
       ..stopName = json['stop_name']
-      ..latitude = json['latitude']
-      ..longitude = json['longitude'];
+      ..latitude = json['stop_location_lat']
+      ..longitude = json['stop_location_long'];
     return stop;
   }
 }

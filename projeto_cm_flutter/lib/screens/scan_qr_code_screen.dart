@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:projeto_cm_flutter/screens/result_screen.dart';
+import 'package:projeto_cm_flutter/screens/schedule_screen.dart';
 
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
 import 'package:projeto_cm_flutter/services/database_service.dart'; 
@@ -18,7 +18,7 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
   bool isTorchOn = false;
   bool _isDialogOpen = false;
 
-  final DatabaseService dbService = DatabaseService();
+  final DatabaseService dbService = DatabaseService.getInstance();
 
   @override
   void initState() {
@@ -58,7 +58,7 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ResultScreen(
+            builder: (context) => ScheduleScreen(
               stop: stop,
               screenClosed: _screenWasClosed,
             ),

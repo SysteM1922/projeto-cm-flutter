@@ -94,6 +94,12 @@ class _UserScreenState extends State<UserScreen> {
               data.map((item) => item as Map<String, dynamic>).toList();
           isLoading = false;
         });
+
+      } else if (response.statusCode == 404) {
+        setState(() {
+          errorMessage = 'No travel history found.';
+          isLoading = false;
+        });
       } else {
         setState(() {
           errorMessage =

@@ -20,7 +20,7 @@ class _RouteScreenState extends State<RouteScreen> {
   bool isLoading = true;
   String errorMessage = "";
 
-  final DatabaseService dbService = DatabaseService();
+  final DatabaseService dbService = DatabaseService.getInstance();
 
   @override
   void initState() {

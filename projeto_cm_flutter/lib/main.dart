@@ -5,6 +5,7 @@ import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:projeto_cm_flutter/screens/login_screen.dart';
+import 'package:projeto_cm_flutter/services/isar_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +14,8 @@ void main() async {
 
   await FMTCObjectBoxBackend().initialise();
   await FMTCStore('busMap').manage.create();
+
+  IsarService().initIsar();
 
   runApp(const MyApp());
 }

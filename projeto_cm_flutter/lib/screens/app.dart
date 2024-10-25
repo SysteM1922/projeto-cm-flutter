@@ -20,7 +20,7 @@ class App extends StatefulWidget {
 class _AppState extends State<App> {
   late StreamSubscription<List<ConnectivityResult>>
       _connectionServiceStatusStream;
-  final DatabaseService dbService = DatabaseService();
+  final DatabaseService dbService = DatabaseService.getInstance();
 
   bool _isUpdatingDataBase = false;
   bool _internetModal = false;
