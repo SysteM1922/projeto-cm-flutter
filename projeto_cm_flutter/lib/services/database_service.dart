@@ -3,17 +3,18 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:isar/isar.dart';
-import 'package:projeto_cm_flutter/services/isar_service.dart'; // To get the Isar instance
+import 'package:projeto_cm_flutter/services/isar_service.dart';
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
-
-  late Isar isar;
+  
+  Isar? _isar;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   late String apiUrl;
+  bool _isInitialized = false;
 
   factory DatabaseService() {
     return _instance;
@@ -21,38 +22,55 @@ class DatabaseService {
 
   DatabaseService._internal() {
     apiUrl = dotenv.env['API_URL'] ?? '';
-    _initializeIsar();
   }
 
-  Future<void> _initializeIsar() async {
-    isar = await IsarService.getInstance();
+  Future<void> initialize() async {
+    if (!_isInitialized) {
+      _isar = await IsarService.getInstance();
+      _isInitialized = true;
+    }
+  }
+
+  // Helper method to ensure initialization
+  Future<Isar> _getIsar() async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+    return _isar!;
   }
 
   Future<models.Stop?> getStopById(String stopId) async {
+    final isar = await _getIsar();
     return await isar.stops.filter().serverIdEqualTo(stopId).findFirst();
   }
 
   Future<List<models.BusStop>> getBusStopsByStopId(String stopId) async {
+    final isar = await _getIsar();
     return await isar.busStops.filter().stopIdEqualTo(stopId).findAll();
   }
 
   Future<List<models.Stop>> getAllStops() async {
+    final isar = await _getIsar();
     return await isar.stops.where().findAll();
   }
 
   Future<models.Route?> getRouteById(String routeId) async {
+    final isar = await _getIsar();
     return await isar.routes.filter().serverIdEqualTo(routeId).findFirst();
   }
 
   Future<List<models.BusStop>> getBusStopsByRouteId(String routeId) async {
+    final isar = await _getIsar();
     return await isar.busStops.filter().routeIdEqualTo(routeId).findAll();
   }
 
   Future<models.Bus?> getBusById(String busId) async {
+    final isar = await _getIsar();
     return await isar.bus.filter().serverIdEqualTo(busId).findFirst();
   }
 
   Future<models.Stop?> getStopByServerId(String stopId) async {
+    final isar = await _getIsar();
     return await isar.stops.filter().serverIdEqualTo(stopId).findFirst();
   }
 
@@ -84,6 +102,7 @@ class DatabaseService {
   }
 
   Future<void> updateDatabase(VoidCallback onComplete) async {
+    final isar = await _getIsar();
     try {
       final response = await http.get(Uri.parse('$apiUrl/system/last_update'));
 
@@ -95,10 +114,6 @@ class DatabaseService {
         final List<dynamic> busStops = data['bus_stops'];
         final String lastUpdate = data['last_updated'];
 
-        // Ensure Isar is initialized
-        if (isar == null) {
-          await _initializeIsar();
-        }
 
         // Clear existing data
         await isar.writeTxn(() async {

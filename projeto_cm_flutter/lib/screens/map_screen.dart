@@ -44,7 +44,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
   void initState() {
     super.initState();
 
-    _getMArkers();
+    _getMarkers();
     
     _requestLocationPermission();
     _listenToLocationServiceStatus();
@@ -57,23 +57,22 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
     super.dispose();
   }
 
-  Future<void> _getMArkers() async {
+  Future<void> _getMarkers() async {
+
     List<models.Stop> stops = await dbService.getAllStops();
 
     for (var stop in stops) {
-      _markersList.add(Marker(
-        width: 40.0,
-        height: 40.0,
-        point: LatLng(stop.latitude!, stop.longitude!),
-        child: Icon(
-          Icons.location_on,
-          color: Colors.red,
-          size: 40.0,
-        ),
-      ));
-    }
-
-    setState(() {});
+    _markersList.add(Marker(
+      width: 40.0,
+      height: 40.0,
+      point: LatLng(stop.latitude!, stop.longitude!),
+      child: Icon(
+        Icons.location_on,
+        color: Colors.red,
+        size: 40.0,
+      ),
+    ));
+  }
   }
 
   void _showLocationDialog(message) {

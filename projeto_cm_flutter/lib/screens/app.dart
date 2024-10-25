@@ -24,14 +24,23 @@ class _AppState extends State<App> {
 
   bool _isUpdatingDataBase = false;
   bool _internetModal = false;
+  bool _isInitialized = false;
 
   final Icon _wifiIcon = Icon(Icons.wifi_off, color: Colors.red);
 
-  @override
+   @override
   void initState() {
     super.initState();
-
+    _initialize();
     _listenToConnectionServiceStatus();
+  }
+
+  Future<void> _initialize() async {
+    await dbService.initialize();
+    
+    setState(() {
+      _isInitialized = true;
+    });
   }
 
   @override
