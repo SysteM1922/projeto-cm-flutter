@@ -6,13 +6,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:isar/isar.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
-import 'package:projeto_cm_flutter/services/isar_service.dart'; // isar singleton 
 import 'package:projeto_cm_flutter/services/database_service.dart'; // DatabaseService to get the singleton instance
 
 class BusTrackingScreen extends StatefulWidget {
@@ -24,6 +21,9 @@ class BusTrackingScreen extends StatefulWidget {
 
 class _BusTrackingScreenState extends State<BusTrackingScreen>
     with TickerProviderStateMixin {
+  
+  final DatabaseService dbService = DatabaseService();
+
   Icon _gpsIcon = Icon(Icons.gps_off, color: Colors.red, size: 35);
 
   late final AnimatedMapController _mapController =
@@ -34,30 +34,20 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
   int _currentOption = 1;
   bool _gpsOn = false;
 
-  late String apiUrl;
-
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
   StreamSubscription<List<ConnectivityResult>>? _connectionServiceStatusStream;
 
   List<Marker> _markersList = [];
 
-  final DatabaseService dbService = DatabaseService();
-  late Isar isar;
 
   @override
   void initState() {
     super.initState();
 
-    apiUrl = dotenv.env['API_URL']!;
-
-    _initializeIsar(); // Initialize Isar
-
+    _getMArkers();
+    
     _requestLocationPermission();
     _listenToLocationServiceStatus();
-  }
-
-  Future<void> _initializeIsar() async {
-    isar = await IsarService.getInstance(); // IsarService to get the singleton instance
   }
 
   @override
@@ -67,9 +57,8 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
     super.dispose();
   }
 
-  void _getMArkers() async {
-
-    List<models.Stop> stops = await isar.stops.where().findAll();
+  Future<void> _getMArkers() async {
+    List<models.Stop> stops = await dbService.getAllStops();
 
     for (var stop in stops) {
       _markersList.add(Marker(
@@ -85,26 +74,6 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
     }
 
     setState(() {});
-  }
-
-  void _showConnectionDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Internet Connection Error'),
-          content: Text(message),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text('Ok', style: TextStyle(color: Colors.blue[800])),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _showLocationDialog(message) {
@@ -326,6 +295,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
                   alignPositionOnUpdate: _alignOnUpdate,
                   alignDirectionOnUpdate: _alignOnUpdate,
                 ),
+              MarkerLayer(markers: _markersList),
             ],
           ),
           Positioned(

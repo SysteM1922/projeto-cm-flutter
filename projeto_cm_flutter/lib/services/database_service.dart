@@ -36,8 +36,8 @@ class DatabaseService {
     return await isar.busStops.filter().stopIdEqualTo(stopId).findAll();
   }
 
-  Future<List<models.Route>> getAllStops() async {
-    return await isar.routes.where().findAll();
+  Future<List<models.Stop>> getAllStops() async {
+    return await isar.stops.where().findAll();
   }
 
   Future<models.Route?> getRouteById(String routeId) async {
