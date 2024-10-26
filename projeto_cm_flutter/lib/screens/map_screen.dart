@@ -11,6 +11,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
+import 'package:projeto_cm_flutter/screens/bus_tracker.dart';
 import 'package:projeto_cm_flutter/screens/schedule_screen.dart';
 import 'package:projeto_cm_flutter/services/database_service.dart'; // DatabaseService to get the singleton instance
 
@@ -42,7 +43,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
   StreamSubscription<List<ConnectivityResult>>? _connectionServiceStatusStream;
 
-  List<Marker> _markersList = [];
+  static List<Marker> _markersList = [];
 
   @override
   void initState() {
@@ -344,7 +345,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
                   alignPositionOnUpdate: _alignOnUpdate,
                   alignDirectionOnUpdate: _alignOnUpdate,
                 ),
-              MarkerLayer(markers: _markersList),
+              BusTracker()
             ],
           ),
           Positioned(
