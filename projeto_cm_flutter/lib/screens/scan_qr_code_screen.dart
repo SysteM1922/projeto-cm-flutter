@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -175,9 +177,21 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
       body: Stack(
         children: [
           MobileScanner(
-            controller: cameraController,
-            onDetect: _foundBarcode,
-          ),
+              controller: cameraController,
+              onDetect: _foundBarcode,
+              errorBuilder: (p0, p1, p2) {
+                return GestureDetector(
+                  onTap: () {
+                    _checkCameraPermissions();
+                    cameraController.start();
+                  },
+                  child: ColoredBox(
+                    color: Colors.black,
+                    child:
+                        Center(child: Icon(Icons.error, color: Colors.white)),
+                  ),
+                );
+              }),
           Positioned(
             top: 40,
             right: 60,
