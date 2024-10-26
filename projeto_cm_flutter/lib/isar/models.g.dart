@@ -4271,3 +4271,582 @@ extension BusStopQueryProperty
     });
   }
 }
+
+// coverage:ignore-file
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
+
+extension GetTravelHistoryCollection on Isar {
+  IsarCollection<TravelHistory> get travelHistorys => this.collection();
+}
+
+const TravelHistorySchema = CollectionSchema(
+  name: r'TravelHistory',
+  id: -276921750469712445,
+  properties: {
+    r'date': PropertySchema(
+      id: 0,
+      name: r'date',
+      type: IsarType.dateTime,
+    ),
+    r'routeNumber': PropertySchema(
+      id: 1,
+      name: r'routeNumber',
+      type: IsarType.string,
+    )
+  },
+  estimateSize: _travelHistoryEstimateSize,
+  serialize: _travelHistorySerialize,
+  deserialize: _travelHistoryDeserialize,
+  deserializeProp: _travelHistoryDeserializeProp,
+  idName: r'id',
+  indexes: {},
+  links: {},
+  embeddedSchemas: {},
+  getId: _travelHistoryGetId,
+  getLinks: _travelHistoryGetLinks,
+  attach: _travelHistoryAttach,
+  version: '3.1.8',
+);
+
+int _travelHistoryEstimateSize(
+  TravelHistory object,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  var bytesCount = offsets.last;
+  {
+    final value = object.routeNumber;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  return bytesCount;
+}
+
+void _travelHistorySerialize(
+  TravelHistory object,
+  IsarWriter writer,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  writer.writeDateTime(offsets[0], object.date);
+  writer.writeString(offsets[1], object.routeNumber);
+}
+
+TravelHistory _travelHistoryDeserialize(
+  Id id,
+  IsarReader reader,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  final object = TravelHistory();
+  object.date = reader.readDateTimeOrNull(offsets[0]);
+  object.id = id;
+  object.routeNumber = reader.readStringOrNull(offsets[1]);
+  return object;
+}
+
+P _travelHistoryDeserializeProp<P>(
+  IsarReader reader,
+  int propertyId,
+  int offset,
+  Map<Type, List<int>> allOffsets,
+) {
+  switch (propertyId) {
+    case 0:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 1:
+      return (reader.readStringOrNull(offset)) as P;
+    default:
+      throw IsarError('Unknown property with id $propertyId');
+  }
+}
+
+Id _travelHistoryGetId(TravelHistory object) {
+  return object.id;
+}
+
+List<IsarLinkBase<dynamic>> _travelHistoryGetLinks(TravelHistory object) {
+  return [];
+}
+
+void _travelHistoryAttach(
+    IsarCollection<dynamic> col, Id id, TravelHistory object) {
+  object.id = id;
+}
+
+extension TravelHistoryQueryWhereSort
+    on QueryBuilder<TravelHistory, TravelHistory, QWhere> {
+  QueryBuilder<TravelHistory, TravelHistory, QAfterWhere> anyId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(const IdWhereClause.any());
+    });
+  }
+}
+
+extension TravelHistoryQueryWhere
+    on QueryBuilder<TravelHistory, TravelHistory, QWhereClause> {
+  QueryBuilder<TravelHistory, TravelHistory, QAfterWhereClause> idEqualTo(
+      Id id) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: id,
+        upper: id,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterWhereClause> idNotEqualTo(
+      Id id) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            )
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            )
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterWhereClause> idGreaterThan(
+      Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.greaterThan(lower: id, includeLower: include),
+      );
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterWhereClause> idLessThan(
+      Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.lessThan(upper: id, includeUpper: include),
+      );
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterWhereClause> idBetween(
+    Id lowerId,
+    Id upperId, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: lowerId,
+        includeLower: includeLower,
+        upper: upperId,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+}
+
+extension TravelHistoryQueryFilter
+    on QueryBuilder<TravelHistory, TravelHistory, QFilterCondition> {
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      dateIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'date',
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      dateIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'date',
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition> dateEqualTo(
+      DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'date',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      dateGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'date',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      dateLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'date',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition> dateBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'date',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition> idEqualTo(
+      Id value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      idGreaterThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition> idLessThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition> idBetween(
+    Id lower,
+    Id upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'id',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      routeNumberIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'routeNumber',
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      routeNumberIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'routeNumber',
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      routeNumberEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'routeNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      routeNumberGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'routeNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      routeNumberLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'routeNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      routeNumberBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'routeNumber',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      routeNumberStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'routeNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      routeNumberEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'routeNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      routeNumberContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'routeNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      routeNumberMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'routeNumber',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      routeNumberIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'routeNumber',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterFilterCondition>
+      routeNumberIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'routeNumber',
+        value: '',
+      ));
+    });
+  }
+}
+
+extension TravelHistoryQueryObject
+    on QueryBuilder<TravelHistory, TravelHistory, QFilterCondition> {}
+
+extension TravelHistoryQueryLinks
+    on QueryBuilder<TravelHistory, TravelHistory, QFilterCondition> {}
+
+extension TravelHistoryQuerySortBy
+    on QueryBuilder<TravelHistory, TravelHistory, QSortBy> {
+  QueryBuilder<TravelHistory, TravelHistory, QAfterSortBy> sortByDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'date', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterSortBy> sortByDateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'date', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterSortBy> sortByRouteNumber() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'routeNumber', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterSortBy>
+      sortByRouteNumberDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'routeNumber', Sort.desc);
+    });
+  }
+}
+
+extension TravelHistoryQuerySortThenBy
+    on QueryBuilder<TravelHistory, TravelHistory, QSortThenBy> {
+  QueryBuilder<TravelHistory, TravelHistory, QAfterSortBy> thenByDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'date', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterSortBy> thenByDateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'date', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterSortBy> thenById() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterSortBy> thenByIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterSortBy> thenByRouteNumber() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'routeNumber', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QAfterSortBy>
+      thenByRouteNumberDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'routeNumber', Sort.desc);
+    });
+  }
+}
+
+extension TravelHistoryQueryWhereDistinct
+    on QueryBuilder<TravelHistory, TravelHistory, QDistinct> {
+  QueryBuilder<TravelHistory, TravelHistory, QDistinct> distinctByDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'date');
+    });
+  }
+
+  QueryBuilder<TravelHistory, TravelHistory, QDistinct> distinctByRouteNumber(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'routeNumber', caseSensitive: caseSensitive);
+    });
+  }
+}
+
+extension TravelHistoryQueryProperty
+    on QueryBuilder<TravelHistory, TravelHistory, QQueryProperty> {
+  QueryBuilder<TravelHistory, int, QQueryOperations> idProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<TravelHistory, DateTime?, QQueryOperations> dateProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'date');
+    });
+  }
+
+  QueryBuilder<TravelHistory, String?, QQueryOperations> routeNumberProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'routeNumber');
+    });
+  }
+}

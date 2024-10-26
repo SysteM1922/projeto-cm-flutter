@@ -52,6 +52,22 @@ class DatabaseService {
     return await isar.stops.filter().serverIdEqualTo(stopId).findFirst();
   }
 
+  Future<List<models.TravelHistory>> getTravelHistory() async {
+    return await isar.travelHistorys.where().findAll();
+  }
+
+  Future<void> saveTravelHistory(List<models.TravelHistory> historyList) async {
+    await isar.writeTxn(() async {
+      await isar.travelHistorys.putAll(historyList);
+    });
+  }
+
+  Future<void> clearTravelHistory() async {
+    await isar.writeTxn(() async {
+      await isar.travelHistorys.clear();
+    });
+  }
+
   Future<int> isDatabaseUpdated() async {
     String? lastUpdate = await _storage.read(key: 'last_update');
     lastUpdate ??= "1970-01-01 00:00:00.1";
