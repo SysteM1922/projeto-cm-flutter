@@ -110,6 +110,7 @@ class _BusTrackerState extends State<BusTracker> {
       bus2Index += _updateIntervalSeconds;
       bus3Index += _updateIntervalSeconds;
 
+      if (!mounted) return;
       setState(() {});
     }
   }

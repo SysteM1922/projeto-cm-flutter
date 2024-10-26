@@ -16,31 +16,72 @@ class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
   final FlutterNfcHce _flutterNfcHcePlugin = FlutterNfcHce();
   final _storage = FlutterSecureStorage();
 
+  bool _modalOpen = false;
+
+  Stream<bool> _nfcStatus = Stream<bool>.empty();
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
+
+    _checkNFC();
+
+    _emulateNfcCard();
+  }
+
+  @override
+  void dispose() {
+    _stopNfcHce();
+    WidgetsBinding.instance.removeObserver(this);
+
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _stopNfcHce();
+    } else if (state == AppLifecycleState.resumed) {
+      _emulateNfcCard();
+    }
+  }
+
   void _showDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('NFC Error'),
-          content: Text(message),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _checkNFC();
-              },
-              child: Text('Ok', style: TextStyle(color: Colors.blue[800])),
-            ),
-            TextButton(
+    if (_modalOpen) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _modalOpen = true;
+      setState(() {});
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('NFC Error'),
+            content: Text(message),
+            actions: <Widget>[
+              TextButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  Navigator.pop(context);
+                  _modalOpen = false;
+                  setState(() {});
                 },
-                child: Text('Cancel', style: TextStyle(color: Colors.blue[800]))),
-          ],
-        );
-      },
-    );
+                child: Text('Ok', style: TextStyle(color: Colors.blue[800])),
+              ),
+              TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    //DefaultTabController.of(context).animateTo(0);
+                  },
+                  child: Text('Cancel',
+                      style: TextStyle(color: Colors.blue[800]))),
+            ],
+          );
+        },
+      );
+    });
   }
 
   void _checkNFC() async {
@@ -52,21 +93,19 @@ class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
       return;
     }
 
-    //isNfcHceSupported
-    bool? isNfcHceSupported = await _flutterNfcHcePlugin.isNfcHceSupported();
+    _nfcStatus = Stream.periodic(Duration(seconds: 1)).asyncMap((_) async {
+      log('Checking NFC status');
+      bool? isNfcEnabled = await _flutterNfcHcePlugin.isNfcEnabled();
 
-    if (!isNfcHceSupported) {
-      _showDialog('NFC HCE is not supported on this device.');
-      return;
-    }
+      if (!isNfcEnabled) {
+        return false;
+      }
 
-    //isNfcEnabled
-    bool? isNfcEnabled = await _flutterNfcHcePlugin.isNfcEnabled();
+      return true;
+    });
 
-    if (!isNfcEnabled) {
-      _showDialog('NFC is not enabled on this device.');
-      return;
-    }
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<String?> startNfcHce(
@@ -93,33 +132,6 @@ class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
   }
 
   @override
-  void initState() {
-    super.initState();
-
-    WidgetsBinding.instance.addObserver(this);
-
-    _checkNFC();
-
-    _emulateNfcCard();
-  }
-
-  @override
-  void dispose() {
-    _stopNfcHce();
-
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      _stopNfcHce();
-    } else if (state == AppLifecycleState.resumed) {
-      _emulateNfcCard();
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
@@ -135,14 +147,16 @@ class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
           ),
           Flexible(
               child: Container(
-                  margin: EdgeInsets.only(top: 20.0, left: 20.0, right: 20.0, bottom: 20.0),
+                  margin: EdgeInsets.only(
+                      top: 20.0, left: 20.0, right: 20.0, bottom: 20.0),
                   decoration: BoxDecoration(
                     boxShadow: [
                       BoxShadow(
                         color: Colors.grey.withOpacity(1),
                         spreadRadius: 0,
                         blurRadius: 5,
-                        offset: const Offset(10, 10), // changes position of shadow
+                        offset:
+                            const Offset(10, 10), // changes position of shadow
                       ),
                     ],
                     borderRadius: BorderRadius.circular(30.0),
@@ -153,6 +167,15 @@ class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
                       'assets/images/card.png',
                     ),
                   ))),
+          StreamBuilder<bool>(
+              stream: _nfcStatus,
+              builder: (context, snapshot) {
+                if (snapshot.data == false) {
+                  _showDialog(
+                      'NFC is not enabled on this device. Please enable it.');
+                }
+                return SizedBox.shrink(); // Return an empty widget
+              }),
         ],
       ),
     );

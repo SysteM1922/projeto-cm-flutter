@@ -10,6 +10,7 @@ import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:permission_handler/permission_handler.dart' as permission;
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
 import 'package:projeto_cm_flutter/screens/bus_tracker.dart';
 import 'package:projeto_cm_flutter/screens/schedule_screen.dart';
@@ -217,8 +218,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
         _toOption2(position);
       } else if (permission == LocationPermission.deniedForever) {
         _gpsOn = false;
-        _showLocationDialog(
-            "Please enable location services to use this feature.");
+        _showEnableLocationDialog();
       }
     } catch (e) {
       _toOption0();
@@ -260,7 +260,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
             "Unable to get current location. Please enable location services.");
       }
     } else {
-      _showEnableLocationDialog();
+      _requestLocationPermission();
     }
   }
 
@@ -277,7 +277,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
             TextButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                await Geolocator.openLocationSettings();
+                await permission.openAppSettings();
               },
               child: Text('Yes', style: TextStyle(color: Colors.blue[800])),
             ),
