@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:projeto_cm_flutter/screens/schedule_screen.dart';
+import 'package:permission_handler/permission_handler.dart';
 
+import 'package:projeto_cm_flutter/screens/schedule_screen.dart';
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
-import 'package:projeto_cm_flutter/services/database_service.dart'; 
+import 'package:projeto_cm_flutter/services/database_service.dart';
 
 class ScanQRCodeScreen extends StatefulWidget {
   const ScanQRCodeScreen({super.key});
@@ -14,6 +15,7 @@ class ScanQRCodeScreen extends StatefulWidget {
 
 class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
   MobileScannerController cameraController = MobileScannerController();
+
   bool _screenOpened = false;
   bool isTorchOn = false;
   bool _isDialogOpen = false;
@@ -23,6 +25,51 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
   @override
   void initState() {
     super.initState();
+
+    _checkCameraPermissions();
+  }
+
+  @override
+  void dispose() {
+    cameraController.dispose();
+    super.dispose();
+  }
+
+  void _showDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Camera Permissions'),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _requestCameraPermissions();
+              },
+              child: Text('Enable', style: TextStyle(color: Colors.blue[800])),
+            ),
+            TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text('No', style: TextStyle(color: Colors.blue[800]))),
+          ],
+        );
+      },
+    );
+  }
+
+  void _requestCameraPermissions() async {
+    await openAppSettings();
+  }
+
+  void _checkCameraPermissions() async {
+    final PermissionStatus status = await Permission.camera.status;
+    if (status.isPermanentlyDenied) {
+      _showDialog('Please enable camera permissions to use this feature.');
+    }
   }
 
   void _foundBarcode(BarcodeCapture barcodeCapture) async {
@@ -83,8 +130,8 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text("Invalid QR Code"),
-          content:
-              const Text("The scanned QR code is invalid. Please scan a valid stop QR code."),
+          content: const Text(
+              "The scanned QR code is invalid. Please scan a valid stop QR code."),
           actions: [
             TextButton(
               child: const Text("OK"),
@@ -106,7 +153,8 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text("Stop Not Found"),
-          content: const Text("The stop ID scanned does not exist in the local database."),
+          content: const Text(
+              "The stop ID scanned does not exist in the local database."),
           actions: [
             TextButton(
               child: const Text("OK"),
@@ -119,13 +167,6 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
         );
       },
     );
-  }
-
-  @override
-  void dispose() {
-    cameraController.dispose();
-    // DO NOT CLOSE ISAR HERE
-    super.dispose();
   }
 
   @override
