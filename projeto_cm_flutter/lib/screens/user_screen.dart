@@ -8,6 +8,7 @@ import 'package:projeto_cm_flutter/screens/login_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({Key? key}) : super(key: key);
@@ -118,6 +119,8 @@ class _UserScreenState extends State<UserScreen> {
   void _signOut(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
     await _storage.deleteAll(); // Clear all stored data
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setBool('biometrics', false);
     // Navigate back to the LoginScreen
     if (!mounted) return;
     Navigator.pushReplacement(
