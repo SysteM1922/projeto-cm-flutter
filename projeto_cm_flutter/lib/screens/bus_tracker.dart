@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -56,9 +57,8 @@ class _BusTrackerState extends State<BusTracker> {
   Future<Itinerarie> _generateItinerary(String path) async {
     List<String> lines = path.split('\n');
     String id = lines[0].toString().trim();
-
+    
     models.Bus? bus = await dbService.getBusById(id);
-
 
     int divsPerLine = int.parse(lines[1]);
     List<LatLng> stops = [];
@@ -136,6 +136,7 @@ class _BusTrackerState extends State<BusTracker> {
         width: 40.0,
         height: 40.0,
         point: _position1,
+        rotate: true,
         child: GestureDetector(
           onTap: () {
             widget.busTapped(
@@ -160,6 +161,7 @@ class _BusTrackerState extends State<BusTracker> {
         width: 40.0,
         height: 40.0,
         point: _position2,
+        rotate: true,
         child: GestureDetector(
           onTap: () {
             widget.busTapped(
@@ -184,6 +186,7 @@ class _BusTrackerState extends State<BusTracker> {
         width: 40.0,
         height: 40.0,
         point: _position3,
+        rotate: true,
         child: GestureDetector(
           onTap: () {
             widget.busTapped(

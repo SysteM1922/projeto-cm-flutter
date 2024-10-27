@@ -42,6 +42,10 @@ class DatabaseService {
   Future<List<models.BusStop>> getBusStopsByRouteId(String routeId) async {
     return await isar.busStops.filter().routeIdEqualTo(routeId).findAll();
   }
+  
+  Future<List<models.Bus>> getAllBuses() async {
+    return await isar.bus.where().findAll();
+  }
 
   Future<models.Bus?> getBusById(String busId) async {
     return await isar.bus.filter().serverIdEqualTo(busId).findFirst();
@@ -68,7 +72,7 @@ class DatabaseService {
   }
 
   Future<int> isDatabaseUpdated() async {
-    String? lastUpdate = await _storage.read(key: 'last_update');
+    String? lastUpdate;
     lastUpdate ??= "1970-01-01 00:00:00.1";
 
     // check if the data is up-to-date
