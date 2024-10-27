@@ -41,17 +41,17 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   bool _gpsOn = false;
   bool _mapInfo = false;
   bool _moving = false;
-  late Widget _info;
+  bool _canTrackBuses = false;
+  Widget _info = Container();
   var _selected;
 
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
 
-  static List<Marker> _markersList = [];
+  static final List<Marker> _markersList = [];
 
   late TextEditingController _searchController;
 
   final Map<String, dynamic> _nameToData = {}; // JUST STOPS
-  bool _isMarkerTapped = false;
   String? _selectedMarkerId;
 
   @override
@@ -69,9 +69,21 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _locationServiceStatusStream?.cancel();
-    super.dispose();
-
     _searchController.dispose();
+
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(MapScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
+      if (!widget.isUpdatingDataBase) {
+        _getMarkers(widget.stopId);
+        _canTrackBuses = true;
+        setState(() {});
+      }
+    }
   }
 
   List<String> _searchResults = [];
@@ -88,8 +100,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _handleResultSelection(String result) {
-    log("Selected: $result");
-
     // Close keyboard
     FocusScope.of(context).unfocus();
 
@@ -114,25 +124,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       _nameToData[utf8.decode(stop.stopName!.codeUnits)] = stop;
     }
 
-    log("Data: $_nameToData");
-
     setState(() {});
   }
 
-  // notify when widget.internetModal changes
-  @override
-  void didUpdateWidget(MapScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
-      if (!widget.isUpdatingDataBase) {
-        _getMarkers(widget.stopId);
-      }
-    }
-  }
-
   void _markerTapped(models.Stop stop) async {
-    _isMarkerTapped = true;
-
     // Close the keyboard
     FocusScope.of(context).unfocus();
 
@@ -177,6 +172,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     setState(() {});
 
     _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
+    Future.delayed(Duration(milliseconds: 600), () {
+      _moving = false;
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   void _busTapped(
@@ -512,19 +513,19 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               keepAlive: true,
               onMapEvent: (MapEvent event) {
                 if (event is MapEventMoveStart) {
+                  FocusScope.of(context).unfocus();
                   if (_currentOption > 1) {
                     _toOption1();
                   }
                 }
-                if (event is MapEventTap && !_isMarkerTapped && _mapInfo) {
+                if (!_moving && _mapInfo) {
                   _mapInfo = false;
-                  // refresh colors
-                  _selectedMarkerId = null;
-                  _getMarkers(null);
+                  if (_selectedMarkerId != null) {
+                    _selectedMarkerId = null;
+                    _getMarkers(null);
+                  }
                   setState(() {});
                 }
-
-                _isMarkerTapped = false;
               },
             ),
             children: [
@@ -543,24 +544,94 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               MarkerLayer(
                 markers: _markersList,
               ),
-              if (_gpsOn)
-                CurrentLocationLayer(
+              Visibility(
+                visible: _gpsOn,
+                child: CurrentLocationLayer(
                   alignPositionOnUpdate: _alignOnUpdate,
                   alignDirectionOnUpdate: _alignOnUpdate,
                 ),
-              if (_markersList.isNotEmpty)
-                BusTracker(
+              ),
+              Visibility(
+                visible: _canTrackBuses,
+                child: BusTracker(
                   busTapped: _busTapped,
                 ),
+              ),
             ],
           ),
+          Visibility(
+            visible: _searchResults.isNotEmpty &&
+                _searchController.text.isNotEmpty &&
+                FocusScope.of(context).hasFocus,
+            child: AnimatedContainer(
+              duration: Duration(milliseconds: 200),
+              child: Positioned(
+                top: 70.0,
+                left: 10.0,
+                right: 10.0,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(20.0),
+                      bottomRight: Radius.circular(20.0),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.5),
+                        spreadRadius: 2,
+                        blurRadius: 5,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: _searchResults.length > 3
+                      ? SizedBox(
+                          height: 200, // Adjust the height as needed
+                          child: Scrollbar(
+                            thickness: 4.0,
+                            child: ListView.builder(
+                              itemCount: _searchResults.length,
+                              itemBuilder: (context, index) {
+                                return ListTile(
+                                  title: Text(_searchResults[index]),
+                                  subtitle: Text("Tap to see more",
+                                      style: TextStyle(
+                                          color: Colors.grey, fontSize: 12)),
+                                  onTap: () {
+                                    _handleResultSelection(
+                                        _searchResults[index]);
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _searchResults.length,
+                          itemBuilder: (context, index) {
+                            return ListTile(
+                              title: Text(_searchResults[index]),
+                              subtitle: Text("Tap to see more",
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 12)),
+                              onTap: () {
+                                _handleResultSelection(_searchResults[index]);
+                              },
+                            );
+                          },
+                        ),
+                ),
+              ),
+            ),
+          ),
           Positioned(
-            top: 35.0,
+            top: 50.0,
             left: 10.0,
             right: 10.0,
             child: Container(
               height: 50,
-              padding: EdgeInsets.symmetric(horizontal: 10.0),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(30.0),
@@ -573,22 +644,33 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  Icon(Icons.search),
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (value) {
-                        _handleSearch();
-                      },
-                      decoration: InputDecoration(
-                        hintText: "Search for stops...",
-                        border: InputBorder.none,
-                      ),
+              child: Flexible(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      _handleSearch();
+                    },
+                    decoration: InputDecoration(
+                      hintText: "Search for stops...",
+                      floatingLabelBehavior: FloatingLabelBehavior.never,
+                      hintStyle: TextStyle(color: Colors.grey[400]),
+                      border: InputBorder.none,
+                      prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              onPressed: () {
+                                _searchController.clear();
+                                _searchResults.clear();
+                                setState(() {});
+                              },
+                              icon: Icon(Icons.close, color: Colors.grey[600]))
+                          : null,
                     ),
+                    textAlignVertical: TextAlignVertical.center,
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -606,64 +688,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               child: _gpsIcon,
             ),
           ),
-          if (_searchResults.isNotEmpty && _searchController.text.isNotEmpty)
-            Positioned(
-              top: 90.0,
-              left: 10.0,
-              right: 10.0,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.5),
-                      spreadRadius: 2,
-                      blurRadius: 5,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: _searchResults.length > 3
-                    ? SizedBox(
-                        height: 200, // Adjust the height as needed
-                        child: Scrollbar(
-                          thickness: 4.0,
-                          child: ListView.builder(
-                            itemCount: _searchResults.length,
-                            itemBuilder: (context, index) {
-                              return ListTile(
-                                title: Text(_searchResults[index]),
-                                subtitle: Text("Tap to see more",
-                                    style: TextStyle(
-                                        color: Colors.grey, fontSize: 12)),
-                                onTap: () {
-                                  _handleResultSelection(_searchResults[index]);
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: _searchResults.length,
-                        itemBuilder: (context, index) {
-                          return ListTile(
-                            title: Text(_searchResults[index]),
-                            subtitle: Text("Tap to see more",
-                                style: TextStyle(
-                                    color: Colors.grey, fontSize: 12)),
-                            onTap: () {
-                              _handleResultSelection(_searchResults[index]);
-                            },
-                          );
-                        },
-                      ),
-              ),
-            ),
-          if (_mapInfo)
-            Positioned(
+          Visibility(
+            visible: _mapInfo,
+            child: Positioned(
               bottom: 100,
               left: 0,
               right: 0,
@@ -721,6 +748,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 ),
               ),
             ),
+          ),
         ],
       ),
     );

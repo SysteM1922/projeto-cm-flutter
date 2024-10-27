@@ -357,14 +357,15 @@ class _UserScreenState extends State<UserScreen> {
 
                   return Padding(
                     padding:
-                        const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                        const EdgeInsets.symmetric(horizontal: 10),
                     child: Card(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                       elevation: 1,
                       child: ListTile(
-                        contentPadding: const EdgeInsets.all(15),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 5, horizontal: 15),
                         title: Text(
                           'Route $routeNumber',
                           style: const TextStyle(

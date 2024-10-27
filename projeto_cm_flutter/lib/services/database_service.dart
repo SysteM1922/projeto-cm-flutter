@@ -72,7 +72,7 @@ class DatabaseService {
   }
 
   Future<int> isDatabaseUpdated() async {
-    String? lastUpdate;
+    String? lastUpdate = await _storage.read(key: 'last_update');
     lastUpdate ??= "1970-01-01 00:00:00.1";
 
     // check if the data is up-to-date
