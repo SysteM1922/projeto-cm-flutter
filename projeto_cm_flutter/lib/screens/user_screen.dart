@@ -220,63 +220,65 @@ class _UserScreenState extends State<UserScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: Column(
-      children: [
-        const SizedBox(height: 50),
-        Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.center,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              IconButton(
-                padding: const EdgeInsets.only(right: 20),
-                icon: const Icon(Icons.logout),
-                onPressed: () => _signOut(context),
-              ),
-            ]),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: Colors.blue[800],
-                radius: 60,
-                child: const Icon(Icons.person, size: 100),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Center(
-                  child: Text(
-                    _userName,
-                    style: const TextStyle(fontSize: 24),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    padding: const EdgeInsets.only(right: 10),
+                    icon: const Icon(Icons.logout),
+                    onPressed: () => _signOut(context),
                   ),
-                ),
+                ],
               ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Colors.blue[800],
+                    radius: 50,
+                    child: const Icon(Icons.person, size: 60),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Text(
+                      _userName,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildTravelHistory(),
+              const SizedBox(height: 20),
             ],
           ),
         ),
-        const SizedBox(height: 20),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _buildTravelHistory(),
-          ),
-        ),
-      ],
-    ));
+      ),
+    );
   }
 
   Widget _buildTravelHistory() {
     if (travelHistory.isEmpty) {
       return Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.history,
               size: 64,
-              color: Colors.grey,
+              color: Colors.grey[400],
             ),
             const SizedBox(height: 16),
             const Text(
@@ -292,9 +294,9 @@ class _UserScreenState extends State<UserScreen> {
     }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20),
           decoration: BoxDecoration(
             border: Border.all(color: Colors.blue.shade200, width: 2),
             borderRadius: BorderRadius.circular(12),
@@ -332,56 +334,59 @@ class _UserScreenState extends State<UserScreen> {
               ),
             ),
             children: [
-              SingleChildScrollView(
-                child: Column(
-                  children: travelHistory.map((travel) {
-                    final routeNumber =
-                        travel['route_number'] ?? 'Unknown Route';
-                    final rawDate = travel['date'] ?? '';
+              ListView.builder(
+                shrinkWrap: true,
+                physics:
+                    const NeverScrollableScrollPhysics(), // no inner scrolling
+                itemCount: travelHistory.length,
+                itemBuilder: (context, index) {
+                  final travel = travelHistory[index];
+                  final routeNumber = travel['route_number'] ?? 'Unknown Route';
+                  final rawDate = travel['date'] ?? '';
 
-                    DateTime? travelDate;
-                    String formattedDate = 'Unknown Date';
+                  DateTime? travelDate;
+                  String formattedDate = 'Unknown Date';
 
-                    try {
-                      travelDate = DateTime.parse(rawDate);
-                      formattedDate =
-                          DateFormat('MMM dd, yyyy - HH:mm').format(travelDate);
-                    } catch (e) {
-                      log('Error parsing date: $e');
-                    }
+                  try {
+                    travelDate = DateTime.parse(rawDate);
+                    formattedDate =
+                        DateFormat('MMM dd, yyyy - HH:mm').format(travelDate);
+                  } catch (e) {
+                    log('Error parsing date: $e');
+                  }
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5),
-                      child: Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                  return Padding(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                    child: Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 1,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(15),
+                        title: Text(
+                          'Route $routeNumber',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        elevation: 1,
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.all(15),
-                          title: Text(
-                            'Route $routeNumber',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        subtitle: Text(
+                          formattedDate,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
                           ),
-                          subtitle: Text(
-                            formattedDate,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          leading: const Icon(
-                            Icons.directions_bus,
-                            color: Colors.blue,
-                          ),
+                        ),
+                        leading: const Icon(
+                          Icons.directions_bus,
+                          color: Colors.blue,
                         ),
                       ),
-                    );
-                  }).toList(),
-                ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
