@@ -79,7 +79,7 @@ class _AppState extends State<App> {
   void _listenToConnectionServiceStatus() async {
     _connectionServiceStatusStream = Connectivity()
         .onConnectivityChanged
-        .listen((List<ConnectivityResult> result) {
+        .listen((List<ConnectivityResult> result) async {
       if (!result.contains(ConnectivityResult.wifi) &&
           !result.contains(ConnectivityResult.mobile) &&
           !result.contains(ConnectivityResult.ethernet) &&
@@ -95,12 +95,12 @@ class _AppState extends State<App> {
         setState(() {});
         return;
       }
-      _checkDataBaseStatus().then((_) {
-        if (!mounted) return;
-        setState(() {
-          _isUpdatingDataBase = false;
-          _internetModal = false;
-        });
+      await _checkDataBaseStatus();
+      log('Database status checked.');
+      if (!mounted) return;
+      setState(() {
+        _isUpdatingDataBase = false;
+        _internetModal = false;
       });
     });
   }
@@ -114,10 +114,8 @@ class _AppState extends State<App> {
       setState(() {
         _isUpdatingDataBase = true;
       });
-      dbService.updateDatabase(() {
-      }).then((_) {
-        return;
-      });
+      log('Database is outdated. Updating...');
+      await dbService.updateDatabase();
     } else if (status == 500) {
       _showConnectionDialog(
           "An error occurred while checking the database status. Please check your internet connection.");
@@ -137,7 +135,9 @@ class _AppState extends State<App> {
             TabBarView(
               physics: const NeverScrollableScrollPhysics(),
               children: <Widget>[
-                MapScreen(stopId: _centerStopId, isUpdatingDataBase: _isUpdatingDataBase),
+                MapScreen(
+                    stopId: _centerStopId,
+                    isUpdatingDataBase: _isUpdatingDataBase),
                 const ScanQRCodeScreen(),
                 const NFCScreen(),
                 const UserScreen(),

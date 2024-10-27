@@ -43,7 +43,7 @@ class DatabaseService {
   Future<List<models.BusStop>> getBusStopsByRouteId(String routeId) async {
     return await isar.busStops.filter().routeIdEqualTo(routeId).findAll();
   }
-  
+
   Future<List<models.Bus>> getAllBuses() async {
     return await isar.bus.where().findAll();
   }
@@ -51,7 +51,7 @@ class DatabaseService {
   Future<models.Bus?> getBusById(String busId) async {
     return await isar.bus.filter().serverIdEqualTo(busId).findFirst();
   }
-  
+
   Future<models.Stop?> getStopByServerId(String stopId) async {
     return await isar.stops.filter().serverIdEqualTo(stopId).findFirst();
   }
@@ -99,7 +99,7 @@ class DatabaseService {
     }
   }
 
-  Future<void> updateDatabase(VoidCallback onComplete) async {
+  Future<void> updateDatabase() async {
     try {
       final response = await http.get(Uri.parse('$apiUrl/system/last_update'));
 
@@ -176,8 +176,6 @@ class DatabaseService {
     } catch (e) {
       // Handle error
       throw Exception('Error updating database: $e');
-    } finally {
-      onComplete();
     }
   }
 }

@@ -40,9 +40,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   bool _gpsOn = false;
   bool _mapInfo = false;
   bool _moving = false;
-  bool _canTrackBuses = false;
   Widget _info = Container();
   var _selected;
+
+  Widget _busTracker = Container();
 
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
 
@@ -79,7 +80,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
       if (widget.isUpdatingDataBase != null && !widget.isUpdatingDataBase!) {
         _getMarkers(widget.stopId).then((_) {
-          _canTrackBuses = true;
+          _busTracker = BusTracker(
+            busTapped: _busTapped,
+          );
         });
       }
     }
@@ -454,43 +457,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       return;
     }
     models.Stop? stop = await dbService.getStopById(stopId);
-    if (stop != null && stop.latitude != null && stop.longitude != null) {
-      _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
-      // Optionally, highlight the marker or show additional info
-      setState(() {
-        _selectedMarkerId = stop.serverId;
-        _mapInfo = true;
-        _info = Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.touch_app,
-              size: 30,
-              color: Colors.transparent,
-            ),
-            Flexible(
-              flex: 2,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  utf8.decode(stop.stopName!.codeUnits),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
-                ),
-              ),
-            ),
-            Icon(
-              Icons.touch_app,
-              size: 30,
-              color: Colors.green,
-            ),
-          ],
-        );
-      });
+    if (stop != null) {
+      _markerTapped(stop);
     }
   }
 
@@ -551,10 +519,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   alignDirectionOnUpdate: _alignOnUpdate,
                 ),
               ),
-              if( _canTrackBuses)
-                BusTracker(
-                  busTapped: _busTapped,
-                ),
+              _busTracker,
             ],
           ),
           Visibility(
@@ -694,11 +659,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 padding: EdgeInsets.symmetric(horizontal: 10),
                 child: ElevatedButton(
                   onPressed: () async {
-                    _mapInfo = false;
-                    if (mounted) {
-                      setState(() {});
-                    }
-
                     dynamic result;
 
                     if (_selected is models.Stop) {
@@ -713,6 +673,11 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                         ),
                       );
                     } else {
+                      _mapInfo = false;
+                      if (mounted) {
+                        setState(() {});
+                      }
+
                       // Navigate directly to BusScreen
                       result = await Navigator.push(
                         context,
