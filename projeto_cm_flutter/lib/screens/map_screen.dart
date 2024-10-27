@@ -40,9 +40,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   bool _gpsOn = false;
   bool _mapInfo = false;
   bool _moving = false;
-  bool _canTrackBuses = false;
   Widget _info = Container();
   var _selected;
+
+  Widget _busTracker = Container();
 
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
 
@@ -464,7 +465,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     }
     models.Stop? stop = await dbService.getStopById(stopId);
     if (stop != null && stop.latitude != null && stop.longitude != null) {
+      _markerTapped(stop);
       _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
+      // Optionally, highlight the marker or show additional info
       setState(() {
         _selectedMarkerId = stop.serverId;
         _mapInfo = true;
@@ -560,10 +563,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   alignDirectionOnUpdate: _alignOnUpdate,
                 ),
               ),
-              if (_canTrackBuses)
-                BusTracker(
-                  busTapped: _busTapped,
-                ),
+              _busTracker,
             ],
           ),
           Visibility(
@@ -704,11 +704,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 padding: EdgeInsets.symmetric(horizontal: 10),
                 child: ElevatedButton(
                   onPressed: () async {
-                    _mapInfo = false;
-                    if (mounted) {
-                      setState(() {});
-                    }
-
                     dynamic result;
 
                     if (_selected is models.Stop) {
@@ -723,6 +718,11 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                         ),
                       );
                     } else {
+                      _mapInfo = false;
+                      if (mounted) {
+                        setState(() {});
+                      }
+
                       // Navigate directly to BusScreen
                       result = await Navigator.push(
                         context,

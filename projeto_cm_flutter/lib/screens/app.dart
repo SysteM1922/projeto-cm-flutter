@@ -86,7 +86,7 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
   void _listenToConnectionServiceStatus() async {
     _connectionServiceStatusStream = Connectivity()
         .onConnectivityChanged
-        .listen((List<ConnectivityResult> result) {
+        .listen((List<ConnectivityResult> result) async {
       if (!result.contains(ConnectivityResult.wifi) &&
           !result.contains(ConnectivityResult.mobile) &&
           !result.contains(ConnectivityResult.ethernet) &&
@@ -118,13 +118,7 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
       setState(() {
         _isUpdatingDataBase = true;
       });
-      dbService.updateDatabase(() {
-        // Optional callback after update
-      }).then((_) {
-        setState(() {
-          _isUpdatingDataBase = false;
-        });
-      });
+      await dbService.updateDatabase();
     } else if (status == 500) {
       _showConnectionDialog(
           "An error occurred while checking the database status. Please check your internet connection.");
