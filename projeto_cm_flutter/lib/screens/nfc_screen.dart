@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_nfc_hce/flutter_nfc_hce.dart';
 import 'package:flutter_nfc_hce/flutter_nfc_hce_platform_interface.dart';
@@ -95,7 +93,6 @@ class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
     }
 
     _nfcStatus = Stream.periodic(Duration(seconds: 1)).asyncMap((_) async {
-      log('Checking NFC status');
       bool? isNfcEnabled = await _flutterNfcHcePlugin.isNfcEnabled();
 
       if (!isNfcEnabled) {

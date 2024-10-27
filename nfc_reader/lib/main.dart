@@ -25,8 +25,12 @@ class MainApp extends StatelessWidget {
       DeviceOrientation.portraitDown,
     ]);
 
-    return const MaterialApp(
-      home: NFCReaderScreen(),
+    return MaterialApp(
+      home: const NFCReaderScreen(),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue)
+            .copyWith(secondary: Colors.blue[800]),
+      ),
     );
   }
 }

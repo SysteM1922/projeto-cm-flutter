@@ -21,40 +21,77 @@ class NFCReaderScreen extends StatefulWidget {
   State<NFCReaderScreen> createState() => _NFCReaderScreenState();
 }
 
-class _NFCReaderScreenState extends State<NFCReaderScreen> {
+class _NFCReaderScreenState extends State<NFCReaderScreen>
+    with WidgetsBindingObserver {
   String _apiUrl = '';
   String _busId = '';
 
+  Stream<bool> _nfcStatus = Stream<bool>.empty();
+
+  bool _modalOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _apiUrl = dotenv.env['API_URL']!;
+    _busId = dotenv.env['BUS_ID']!;
+
+    WidgetsBinding.instance.addObserver(this);
+
+    _checkNFC();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
   void _showDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('NFC Error'),
-          content: Text(message),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _checkNFC();
-              },
-              child: const Text('Ok'),
-            ),
-          ],
-        );
-      },
-    );
+    if (_modalOpen) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _modalOpen = true;
+      setState(() {});
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('NFC Error'),
+            content: Text(message),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _modalOpen = false;
+                  setState(() {});
+                  _checkNFC();
+                },
+                child: const Text('Ok'),
+              ),
+            ],
+          );
+        },
+      );
+    });
   }
 
   void _checkNFC() async {
-    bool isNFCEnabled = await NfcManager.instance.isAvailable();
+    _nfcStatus =
+        Stream.periodic(const Duration(seconds: 1)).asyncMap((_) async {
+      bool? isNfcEnabled = await NfcManager.instance.isAvailable();
 
-    if (!isNFCEnabled) {
-      _showDialog(
-          'NFC functionality is not enabled on this device.\nPlease enable NFC and try again.');
-    } else {
-      _readNFC();
-    }
+      if (!isNfcEnabled) {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _alertPage(StatefulWidget page) {
@@ -150,16 +187,6 @@ class _NFCReaderScreenState extends State<NFCReaderScreen> {
   }
 
   @override
-  void initState() {
-    super.initState();
-
-    _apiUrl = dotenv.env['API_URL']!;
-    _busId = dotenv.env['BUS_ID']!;
-
-    _checkNFC();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
@@ -185,6 +212,20 @@ class _NFCReaderScreenState extends State<NFCReaderScreen> {
                 style: TextStyle(fontSize: 24.0),
               ),
             ),
+            StreamBuilder<bool>(
+                stream: _nfcStatus,
+                builder: (context, snapshot) {
+                  if (snapshot.data == false) {
+                    if (_modalOpen) {
+                      return const SizedBox.shrink(); // Return an empty widget
+                    }
+                    _showDialog(
+                        'NFC is not enabled on this device. Please enable it.');
+                  } else if (snapshot.data == true) {
+                    _readNFC();
+                  }
+                  return const SizedBox.shrink(); // Return an empty widget
+                }),
           ],
         ),
       ),
