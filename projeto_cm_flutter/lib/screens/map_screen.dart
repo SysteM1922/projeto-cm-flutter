@@ -17,9 +17,9 @@ import 'package:projeto_cm_flutter/screens/schedule_screen.dart';
 import 'package:projeto_cm_flutter/services/database_service.dart'; // DatabaseService to get the singleton instance
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key, this.stopId, this.internetModal = false});
+  const MapScreen({super.key, this.stopId, this.isUpdatingDataBase = false});
   final String? stopId;
-  final bool internetModal;
+  final bool isUpdatingDataBase;
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -64,9 +64,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   @override
   void didUpdateWidget(MapScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    log('${widget.internetModal}');
-    if (widget.internetModal != oldWidget.internetModal) {
-      if (!widget.internetModal) {
+    if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
+      if (!widget.isUpdatingDataBase) {
         _getMarkers(widget.stopId);
       }
     }

@@ -21,8 +21,8 @@ class _AppState extends State<App> {
       _connectionServiceStatusStream;
   final DatabaseService dbService = DatabaseService.getInstance();
 
-  bool _isUpdatingDataBase = false;
-  static bool _internetModal = false;
+  static bool _isUpdatingDataBase = false;
+  bool _internetModal = false;
 
   final Icon _wifiIcon = Icon(Icons.wifi_off, color: Colors.red);
 
@@ -138,7 +138,7 @@ class _AppState extends State<App> {
             TabBarView(
               physics: const NeverScrollableScrollPhysics(),
               children: <Widget>[
-                MapScreen(stopId: _centerStopId, internetModal: _internetModal),
+                MapScreen(stopId: _centerStopId, isUpdatingDataBase: _isUpdatingDataBase),
                 const ScanQRCodeScreen(),
                 const NFCScreen(),
                 const UserScreen(),

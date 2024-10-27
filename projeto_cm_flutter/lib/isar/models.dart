@@ -16,7 +16,7 @@ class Stop {
 
   factory Stop.fromJson(Map<String, dynamic> json) {
     final stop = Stop()
-      ..serverId = json['id']
+      ..serverId = json['id'].toString().trim()
       ..stopName = json['stop_name']
       ..latitude = json['stop_location_lat']
       ..longitude = json['stop_location_long'];
@@ -39,7 +39,7 @@ class Route {
 
   factory Route.fromJson(Map<String, dynamic> json) {
     final route = Route()
-      ..serverId = json['id']
+      ..serverId = json['id'].toString().trim()
       ..routeName = json['route_name']
       ..routeNumber = json['route_number'];
     return route;
@@ -59,9 +59,9 @@ class Bus {
 
   factory Bus.fromJson(Map<String, dynamic> json) {
     final bus = Bus()
-      ..serverId = json['id']
+      ..serverId = json['id'].toString().trim()
       ..busName = json['bus_name']
-      ..routeId = json['route_id'];
+      ..routeId = json['route_id'].toString().trim();
     return bus;
   }
 }
@@ -80,11 +80,11 @@ class BusStop {
 
   factory BusStop.fromJson(Map<String, dynamic> json) {
     final busStop = BusStop()
-      ..serverId = json['id']
+      ..serverId = json['id'].toString().trim()
       ..arrivalTime = DateTime.parse(json['stop_time'])
-      ..stopId = json['stop_id']
-      ..busId = json['bus_id']
-      ..routeId = json['route_id'];
+      ..stopId = json['stop_id'].toString().trim()
+      ..busId = json['bus_id'].toString().trim()
+      ..routeId = json['route_id'].toString().trim();
     return busStop;
   }
 }
