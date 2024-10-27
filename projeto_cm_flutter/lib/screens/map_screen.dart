@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
@@ -15,7 +13,9 @@ import 'package:projeto_cm_flutter/isar/models.dart' as models;
 import 'package:projeto_cm_flutter/screens/bus_screen.dart';
 import 'package:projeto_cm_flutter/screens/bus_tracker.dart';
 import 'package:projeto_cm_flutter/screens/schedule_screen.dart';
-import 'package:projeto_cm_flutter/services/database_service.dart'; // DatabaseService to get the singleton instance
+import 'package:projeto_cm_flutter/services/database_service.dart';
+import 'package:projeto_cm_flutter/state/app_state.dart';
+import 'package:provider/provider.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key, this.stopId, this.isUpdatingDataBase});
@@ -76,12 +76,15 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   @override
   void didUpdateWidget(MapScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
-      if (widget.isUpdatingDataBase != null && !widget.isUpdatingDataBase!) {
-        _getMarkers(widget.stopId).then((_) {
-          _canTrackBuses = true;
-        });
-      }
+
+    if (widget.stopId != oldWidget.stopId && widget.stopId != null) {
+      _centerOnStop(widget.stopId!);
+
+      // Defer the state update to avoid calling setState during build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final appState = Provider.of<AppState>(context, listen: false);
+        appState.resetCenterStopId();
+      });
     }
   }
 
@@ -95,6 +98,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         _searchResults.add(name);
       }
     });
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -113,6 +117,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     // Clear search results
     _searchController.clear();
     _searchResults.clear();
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -122,7 +127,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     for (var stop in stops) {
       _nameToData[utf8.decode(stop.stopName!.codeUnits)] = stop;
     }
-
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -168,6 +173,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _moving = true;
     _mapInfo = true;
     _selected = stop;
+    if (!mounted) return;
     setState(() {});
 
     _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
@@ -215,6 +221,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _moving = true;
     _mapInfo = true;
     _selected = itinerary.id;
+    if (!mounted) return;
     setState(() {});
 
     _mapController.centerOnPoint(position);
@@ -274,6 +281,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _showLocationDialog(message) {
+    if (!mounted) return;
     setState(() {});
     showDialog(
       context: context,
@@ -286,6 +294,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               onPressed: () async {
                 Navigator.pop(context);
                 _requestLocationPermission();
+                if (!mounted) return;
                 setState(() {});
               },
               child: Text('Enable', style: TextStyle(color: Colors.blue[800])),
@@ -293,6 +302,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
+                if (!mounted) return;
                 setState(() {});
               },
               child: Text('No', style: TextStyle(color: Colors.blue[800])),
@@ -382,19 +392,18 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _listenToLocationServiceStatus() {
-    _locationServiceStatusStream = Geolocator.getServiceStatusStream().listen(
-      (ServiceStatus status) {
-        if (status == ServiceStatus.disabled) {
-          if (_currentOption != 0) {
-            _toOption0();
-          }
-        } else if (status == ServiceStatus.enabled) {
-          if (_currentOption == 0) {
-            _toOption1();
-          }
+    _locationServiceStatusStream =
+        Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
+      if (status == ServiceStatus.disabled) {
+        if (_currentOption != 0) {
+          _toOption0();
         }
-      },
-    );
+      } else if (status == ServiceStatus.enabled) {
+        if (_currentOption == 0) {
+          _toOption1();
+        }
+      }
+    });
   }
 
   void _changeLocationOption() async {
@@ -456,7 +465,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     models.Stop? stop = await dbService.getStopById(stopId);
     if (stop != null && stop.latitude != null && stop.longitude != null) {
       _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
-      // Optionally, highlight the marker or show additional info
       setState(() {
         _selectedMarkerId = stop.serverId;
         _mapInfo = true;
@@ -524,6 +532,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     _selectedMarkerId = null;
                     _getMarkers(null);
                   }
+                  if (!mounted) return;
                   setState(() {});
                 }
               },
@@ -551,7 +560,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   alignDirectionOnUpdate: _alignOnUpdate,
                 ),
               ),
-              if( _canTrackBuses)
+              if (_canTrackBuses)
                 BusTracker(
                   busTapped: _busTapped,
                 ),
@@ -660,6 +669,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                             onPressed: () {
                               _searchController.clear();
                               _searchResults.clear();
+                              if (!mounted) return;
                               setState(() {});
                             },
                             icon: Icon(Icons.close, color: Colors.grey[600]))
@@ -725,9 +735,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     }
 
                     if (result != null && result['centerStopId'] != null) {
-                      _centerOnStop(result['centerStopId']);
-                      _selectedMarkerId = result['centerStopId'];
-                      _getMarkers(null);
+                      // Update AppState
+                      final appState =
+                          Provider.of<AppState>(context, listen: false);
+                      appState.navigateToMapWithStop(result['centerStopId']);
                     }
                   },
                   style: ElevatedButton.styleFrom(

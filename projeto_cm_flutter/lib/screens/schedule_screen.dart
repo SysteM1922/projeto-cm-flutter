@@ -1,9 +1,7 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:projeto_cm_flutter/screens/bus_screen.dart';
 import 'package:projeto_cm_flutter/services/database_service.dart';
-
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
 
 class ScheduleScreen extends StatefulWidget {
@@ -202,18 +200,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       ],
                     ),
                     ElevatedButton(
-                      onPressed: () async {
-                        final result = await Navigator.push(
+                      onPressed: () {
+                        // Navigate to BusScreen without awaiting result
+                        Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => BusScreen(busId: schedule.busId ?? ''),
+                            builder: (context) =>
+                                BusScreen(busId: schedule.busId ?? ''),
                           ),
                         );
-                        // Check if BusScreen returned a 'centerStopId'
-                        if (result != null && result['centerStopId'] != null) {
-                          // go back to the map with the centerStopId!!
-                          Navigator.pop(context, result);
-                        }
+                        // No need to await and handle result
                       },
                       child: const Text("View Details"),
                     ),

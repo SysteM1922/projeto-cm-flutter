@@ -1,14 +1,13 @@
 import 'dart:async';
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-
+import 'package:provider/provider.dart';
 import 'package:projeto_cm_flutter/screens/map_screen.dart';
 import 'package:projeto_cm_flutter/screens/scan_qr_code_screen.dart';
 import 'package:projeto_cm_flutter/screens/nfc_screen.dart';
 import 'package:projeto_cm_flutter/screens/user_screen.dart';
 import 'package:projeto_cm_flutter/services/database_service.dart';
+import 'package:projeto_cm_flutter/state/app_state.dart';
 
 class App extends StatefulWidget {
   const App({super.key});
@@ -17,43 +16,51 @@ class App extends StatefulWidget {
   State<App> createState() => _AppState();
 }
 
-class _AppState extends State<App> {
+class _AppState extends State<App> with SingleTickerProviderStateMixin {
   late StreamSubscription<List<ConnectivityResult>>
       _connectionServiceStatusStream;
   final DatabaseService dbService = DatabaseService.getInstance();
 
-  static bool? _isUpdatingDataBase;
+  bool? _isUpdatingDataBase;
   bool _internetModal = false;
-
   final Icon _wifiIcon = Icon(Icons.wifi_off, color: Colors.red);
 
-  int _selectedTab = 0;
-  String? _centerStopId;
+  late TabController _tabController;
+
+  bool _isTabControllerInitialized = false;
 
   @override
   void initState() {
     super.initState();
-
     _listenToConnectionServiceStatus();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final appState = Provider.of<AppState>(context, listen: false);
+      _tabController = TabController(
+        length: 4,
+        vsync: this,
+        initialIndex: appState.selectedTab,
+      );
+
+      _tabController.addListener(() {
+        if (_tabController.indexIsChanging) {
+          appState.setSelectedTab(_tabController.index);
+        }
+      });
+
+      setState(() {
+        _isTabControllerInitialized = true;
+      });
+    });
   }
 
   @override
   void dispose() {
     _connectionServiceStatusStream.cancel();
-    super.dispose();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final args =
-        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-    if (args != null) {
-      setState(() {
-        _selectedTab = args['selectedTab'];
-        _centerStopId = args['centerStopId'];
-      });
+    if (_isTabControllerInitialized) {
+      _tabController.dispose();
     }
+    super.dispose();
   }
 
   void _showConnectionDialog(String message) {
@@ -108,81 +115,92 @@ class _AppState extends State<App> {
   Future<void> _checkDataBaseStatus() async {
     int status = await dbService.isDatabaseUpdated();
     if (status == 404) {
-      if (!mounted) {
-        return;
-      }
       setState(() {
         _isUpdatingDataBase = true;
       });
       dbService.updateDatabase(() {
+        // Optional callback after update
       }).then((_) {
-        return;
+        setState(() {
+          _isUpdatingDataBase = false;
+        });
       });
     } else if (status == 500) {
       _showConnectionDialog(
           "An error occurred while checking the database status. Please check your internet connection.");
     }
-    return;
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      animationDuration: const Duration(milliseconds: 0),
-      length: 4,
-      initialIndex: _selectedTab,
-      child: Scaffold(
-        body: Stack(
-          children: [
-            TabBarView(
-              physics: const NeverScrollableScrollPhysics(),
-              children: <Widget>[
-                MapScreen(stopId: _centerStopId, isUpdatingDataBase: _isUpdatingDataBase),
-                const ScanQRCodeScreen(),
-                const NFCScreen(),
-                const UserScreen(),
-              ],
-            ),
-            if (_internetModal)
-              Positioned(
-                bottom: 20,
-                left: 10,
-                child: ElevatedButton(
-                  onPressed: () => {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    padding: EdgeInsets.all(20),
+    return Consumer<AppState>(
+      builder: (context, appState, child) {
+        if (!_isTabControllerInitialized) {
+          // TabController not initialized yet
+          return Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // If AppState.selectedTab has changed externally, update TabController
+        if (_tabController.index != appState.selectedTab &&
+            !_tabController.indexIsChanging) {
+          _tabController.animateTo(appState.selectedTab);
+        }
+
+        return Scaffold(
+          body: Stack(
+            children: [
+              TabBarView(
+                controller: _tabController,
+                physics: const NeverScrollableScrollPhysics(),
+                children: <Widget>[
+                  MapScreen(
+                    stopId: appState.centerStopId,
+                    isUpdatingDataBase: _isUpdatingDataBase,
                   ),
-                  child: _wifiIcon,
-                ),
+                  const ScanQRCodeScreen(),
+                  const NFCScreen(),
+                  const UserScreen(),
+                ],
               ),
-            if (_isUpdatingDataBase != null && _isUpdatingDataBase!)
-              Container(
-                color: Colors.black45,
-                child: AlertDialog(
-                  title: const Text('Database Update'),
-                  content: const Text(
-                      'The database is outdated. Wait while we update it.'),
-                  actions: <Widget>[
-                    // add loading spinner
-                    Center(
-                      child: CircularProgressIndicator(
-                        color: Colors.blue[800],
-                      ),
+              if (_internetModal)
+                Positioned(
+                  bottom: 20,
+                  left: 10,
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      padding: EdgeInsets.all(20),
                     ),
-                  ],
+                    child: _wifiIcon,
+                  ),
                 ),
-              ),
-          ],
-        ),
-        bottomNavigationBar: BottomAppBar(
-          color: Colors.white,
-          padding: const EdgeInsets.only(top: 10.0),
-          height: 80.0,
-          child: TabBar(
+              if (_isUpdatingDataBase != null && _isUpdatingDataBase!)
+                Container(
+                  color: Colors.black45,
+                  child: AlertDialog(
+                    title: const Text('Database Update'),
+                    content: const Text(
+                        'The database is outdated. Wait while we update it.'),
+                    actions: <Widget>[
+                      Center(
+                        child: CircularProgressIndicator(
+                          color: Colors.blue[800],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          bottomNavigationBar: TabBar(
+            controller: _tabController,
             labelColor: Colors.blue[800],
             unselectedLabelColor: Colors.grey,
-            overlayColor: WidgetStateProperty.all(Colors.grey.withOpacity(0.1)),
+            overlayColor:
+                MaterialStateProperty.all(Colors.grey.withOpacity(0.1)),
             splashBorderRadius: BorderRadius.circular(20.0),
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
             dividerHeight: 0.0,
@@ -215,8 +233,8 @@ class _AppState extends State<App> {
               ),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

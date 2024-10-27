@@ -101,9 +101,8 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
       // Query the database for the stop with the given stopId
       final models.Stop? stop = await dbService.getStopById(stopId);
 
-      if (stop != null && !_screenOpened) {
+      if (stop != null) {
         _screenOpened = true;
-        setState(() {});
         // Pass the stop data to the ResultScreen
         Navigator.push(
           context,
@@ -114,7 +113,7 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
             ),
           ),
         );
-      } else if (stop == null) {
+      } else {
         if (!_isDialogOpen) {
           _showStopNotFoundDialog();
         }
