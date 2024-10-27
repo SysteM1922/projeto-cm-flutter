@@ -202,14 +202,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       ],
                     ),
                     ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
+                      onPressed: () async {
+                        final result = await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                BusScreen(busId: schedule.busId ?? ''),
+                            builder: (context) => BusScreen(busId: schedule.busId ?? ''),
                           ),
                         );
+                        // Check if BusScreen returned a 'centerStopId'
+                        if (result != null && result['centerStopId'] != null) {
+                          // go back to the map with the centerStopId!!
+                          Navigator.pop(context, result);
+                        }
                       },
                       child: const Text("View Details"),
                     ),

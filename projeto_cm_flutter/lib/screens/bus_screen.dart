@@ -144,10 +144,13 @@ class _BusScreenState extends State<BusScreen> {
                                 ),
                                 onPressed: () {
                                   Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) => RouteScreen(
-                                              routeId: busData['route_id'])));
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => RouteScreen(
+                                        routeId: busData['route_id'],
+                                      ),
+                                    ),
+                                  );
                                 },
                                 child: Center(
                                   child: Text(
@@ -178,36 +181,31 @@ class _BusScreenState extends State<BusScreen> {
         stop['arrival_time']?.substring(11, 16) ?? '--:--'; // Extract time only
 
     return GestureDetector(
-        onTap: () {
-          Navigator.pushNamed(
-            context,
-            '/app',
-            arguments: {
-              'selectedTab': 0,
-              'centerStopId': stop['stop_id'],
-            },
-          );
-        },
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 32),
-          leading: StopIcon(isFirst: isFirstStop, isLast: isLastStop),
-          title: Text(
-            stop['stop_name'] ?? 'Stop',
-            style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87),
-          ),
-          subtitle: Row(
-            children: [
-              const Icon(Icons.access_time, color: Colors.green, size: 14),
-              const SizedBox(width: 5),
-              Text(
-                "Arrival Time: $arrivalTime",
-                style: const TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-            ],
-          ),
-        ));
+      onTap: () {
+        Navigator.pop(context, {
+          'centerStopId':
+              stop['stop_id'], // Send the stop ID back to the previous screen
+        });
+      },
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 32),
+        leading: StopIcon(isFirst: isFirstStop, isLast: isLastStop),
+        title: Text(
+          stop['stop_name'] ?? 'Stop',
+          style: const TextStyle(
+              fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+        ),
+        subtitle: Row(
+          children: [
+            const Icon(Icons.access_time, color: Colors.green, size: 14),
+            const SizedBox(width: 5),
+            Text(
+              "Arrival Time: $arrivalTime",
+              style: const TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

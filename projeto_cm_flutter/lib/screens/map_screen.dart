@@ -74,21 +74,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _searchController.dispose();
   }
 
-  @override
-  void didUpdateWidget(MapScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
-      if (!widget.isUpdatingDataBase) {
-        _getMarkers();
-      }
-    }
-
-    if (widget.stopId != oldWidget.stopId) {
-      _centerOnStop(widget.stopId);
-    }
-  }
-
-  final List<String> _searchResults = [];
+  List<String> _searchResults = [];
 
   void _handleSearch() {
     String searchText = _searchController.text.toLowerCase();
@@ -133,13 +119,14 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     setState(() {});
   }
 
-  void _centerOnStop(String? stopId) async {
-    if (stopId == null) {
-      return;
-    }
-    models.Stop? stop = await dbService.getStopById(stopId);
-    if (stop != null) {
-      _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
+  // notify when widget.internetModal changes
+  @override
+  void didUpdateWidget(MapScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
+      if (!widget.isUpdatingDataBase) {
+        _getMarkers(widget.stopId);
+      }
     }
   }
 
@@ -151,6 +138,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
     // Set the selected marker ID to the tapped stop’s ID
     _selectedMarkerId = stop.serverId;
+
+    await _getMarkers(null);
 
     _info = Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -188,12 +177,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     setState(() {});
 
     _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
-    Future.delayed(Duration(milliseconds: 600), () {
-      _moving = false;
-      if (mounted) {
-        setState(() {});
-      }
-    });
   }
 
   void _busTapped(
@@ -243,14 +226,18 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     });
   }
 
-  Future<void> _getMarkers() async {
+  Future<void> _getMarkers(String? centerStopId) async {
     List<models.Stop> stops = await dbService.getAllStops();
+    models.Stop? savedStop;
 
     _markersList.clear();
 
     for (var stop in stops) {
       if (stop.latitude == null || stop.longitude == null) {
         continue;
+      }
+      if (centerStopId != null && stop.serverId == centerStopId) {
+        savedStop = stop;
       }
       _markersList.add(Marker(
         width: 40.0,
@@ -282,6 +269,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       return;
     }
     setState(() {});
+    if (savedStop != null) _markerTapped(savedStop);
   }
 
   void _showLocationDialog(message) {
@@ -460,6 +448,51 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     );
   }
 
+  void _centerOnStop(String stopId) async {
+    if (stopId.isEmpty) {
+      return;
+    }
+    models.Stop? stop = await dbService.getStopById(stopId);
+    if (stop != null && stop.latitude != null && stop.longitude != null) {
+      _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
+      // Optionally, highlight the marker or show additional info
+      setState(() {
+        _selectedMarkerId = stop.serverId;
+        _mapInfo = true;
+        _info = Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.touch_app,
+              size: 30,
+              color: Colors.transparent,
+            ),
+            Flexible(
+              flex: 2,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  utf8.decode(stop.stopName!.codeUnits),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+              ),
+            ),
+            Icon(
+              Icons.touch_app,
+              size: 30,
+              color: Colors.green,
+            ),
+          ],
+        );
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -485,8 +518,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 }
                 if (event is MapEventTap && !_isMarkerTapped && _mapInfo) {
                   _mapInfo = false;
+                  // refresh colors
                   _selectedMarkerId = null;
-                  if (!mounted) return;
+                  _getMarkers(null);
                   setState(() {});
                 }
 
@@ -636,26 +670,42 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     _mapInfo = false;
                     if (mounted) {
                       setState(() {});
                     }
-                    Navigator.push(
-                      context,
-                      _selected is models.Stop
-                          ? MaterialPageRoute(
-                              builder: (context) => ScheduleScreen(
-                                stop: _selected,
-                                screenClosed: () {},
-                              ),
-                            )
-                          : MaterialPageRoute(
-                              builder: (context) => BusScreen(
-                                busId: _selected,
-                              ),
-                            ),
-                    );
+
+                    dynamic result;
+
+                    if (_selected is models.Stop) {
+                      // Navigate to ScheduleScreen
+                      result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ScheduleScreen(
+                            stop: _selected,
+                            screenClosed: () {},
+                          ),
+                        ),
+                      );
+                    } else {
+                      // Navigate directly to BusScreen
+                      result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BusScreen(
+                            busId: _selected,
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (result != null && result['centerStopId'] != null) {
+                      _centerOnStop(result['centerStopId']);
+                      _selectedMarkerId = result['centerStopId'];
+                      _getMarkers(null);
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     elevation: 1,
