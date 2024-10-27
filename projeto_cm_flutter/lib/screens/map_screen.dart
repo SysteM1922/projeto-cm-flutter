@@ -89,7 +89,21 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  List<String> _searchResults = []; // List to store search results
+  @override
+  void didUpdateWidget(MapScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
+      if (!widget.isUpdatingDataBase) {
+        _getMarkers();
+      }
+    }
+
+    if (widget.stopId != oldWidget.stopId) {
+      _centerOnStop(widget.stopId);
+    }
+  }
+
+  final List<String> _searchResults = [];
 
   void _handleSearch() {
     String searchText = _searchController.text.toLowerCase();
@@ -102,14 +116,13 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     setState(() {});
   }
 
-  // notify when widget.internetModal changes
-  @override
-  void didUpdateWidget(MapScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
-      if (!widget.isUpdatingDataBase) {
-        _getMarkers(widget.stopId);
-      }
+  void _centerOnStop(String? stopId) async {
+    if (stopId == null) {
+      return;
+    }
+    models.Stop? stop = await dbService.getStopById(stopId);
+    if (stop != null) {
+      _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
     }
   }
 
@@ -150,6 +163,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     setState(() {});
 
     _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
+    Future.delayed(Duration(milliseconds: 600), () {
+      _moving = false;
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   void _busTapped(
@@ -199,18 +218,14 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     });
   }
 
-  Future<void> _getMarkers(String? centerStopId) async {
+  Future<void> _getMarkers() async {
     List<models.Stop> stops = await dbService.getAllStops();
-    models.Stop? savedStop;
 
     _markersList.clear();
 
     for (var stop in stops) {
       if (stop.latitude == null || stop.longitude == null) {
         continue;
-      }
-      if (centerStopId != null && stop.serverId == centerStopId) {
-        savedStop = stop;
       }
       _markersList.add(Marker(
         width: 40.0,
@@ -241,7 +256,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       return;
     }
     setState(() {});
-    if (savedStop != null) _markerTapped(savedStop);
   }
 
   void _showLocationDialog(message) {
@@ -445,9 +459,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 }
                 if (!_moving && _mapInfo) {
                   _mapInfo = false;
-                  if (mounted) {
-                    setState(() {});
-                  }
+                  if (!mounted) return;
+                  setState(() {});
                 }
               },
             ),
