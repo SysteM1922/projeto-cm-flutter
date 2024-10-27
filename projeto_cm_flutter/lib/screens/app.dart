@@ -22,7 +22,7 @@ class _AppState extends State<App> {
   final DatabaseService dbService = DatabaseService.getInstance();
 
   bool _isUpdatingDataBase = false;
-  bool _internetModal = false;
+  static bool _internetModal = false;
 
   final Icon _wifiIcon = Icon(Icons.wifi_off, color: Colors.red);
 
@@ -45,7 +45,8 @@ class _AppState extends State<App> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
     if (args != null) {
       setState(() {
         _selectedTab = args['selectedTab'];
@@ -93,17 +94,16 @@ class _AppState extends State<App> {
         setState(() {});
         return;
       }
-      _checkDataBaseStatus();
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _internetModal = false;
+      _checkDataBaseStatus().then((_) {
+        if (!mounted) return;
+        setState(() {
+          _internetModal = false;
+        });
       });
     });
   }
 
-  void _checkDataBaseStatus() async {
+  Future<void> _checkDataBaseStatus() async {
     int status = await dbService.isDatabaseUpdated();
     if (status == 404) {
       if (!mounted) {
@@ -112,13 +112,13 @@ class _AppState extends State<App> {
       setState(() {
         _isUpdatingDataBase = true;
       });
-      dbService.updateDatabase( () {
-        if (!mounted) {
-          return;
-        }
+      dbService.updateDatabase(() {
+        if (!mounted) return;
         setState(() {
           _isUpdatingDataBase = false;
         });
+      }).then((_) {
+        return;
       });
     } else if (status == 500) {
       _showConnectionDialog(
@@ -138,7 +138,7 @@ class _AppState extends State<App> {
             TabBarView(
               physics: const NeverScrollableScrollPhysics(),
               children: <Widget>[
-                MapScreen(stopId: _centerStopId),
+                MapScreen(stopId: _centerStopId, internetModal: _internetModal),
                 const ScanQRCodeScreen(),
                 const NFCScreen(),
                 const UserScreen(),

@@ -108,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
           } else {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const App()),
+              MaterialPageRoute(builder: (context) => App()),
             );
           }
         }
@@ -175,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.pop(context, false);
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => const App()),
+                      MaterialPageRoute(builder: (context) => App()),
                     );
                   },
                   child: Text('No', style: TextStyle(color: Colors.blue[800])),
@@ -197,7 +197,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const App()),
+          MaterialPageRoute(builder: (context) => App()),
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -213,7 +213,7 @@ class _LoginScreenState extends State<LoginScreen> {
           if (email == _emailController.text && password == _passwordController.text) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const App()),
+              MaterialPageRoute(builder: (context) => App()),
             );
             return;
           } else {

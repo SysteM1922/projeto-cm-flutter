@@ -37,9 +37,9 @@ class _BusTrackerState extends State<BusTracker> {
   static LatLng _position2 = LatLng(0, 0);
   static LatLng _position3 = LatLng(0, 0);
 
-  late Itinerarie _it1;
-  late Itinerarie _it2;
-  late Itinerarie _it3;
+  static late Itinerarie _it1;
+  static late Itinerarie _it2;
+  static late Itinerarie _it3;
 
   @override
   void initState() {
@@ -56,7 +56,9 @@ class _BusTrackerState extends State<BusTracker> {
   Future<Itinerarie> _generateItinerary(String path) async {
     List<String> lines = path.split('\n');
     String id = lines[0].toString().trim();
+
     models.Bus? bus = await dbService.getBusById(id);
+
 
     int divsPerLine = int.parse(lines[1]);
     List<LatLng> stops = [];
@@ -79,7 +81,7 @@ class _BusTrackerState extends State<BusTracker> {
       stops.add(LatLng(lat, long));
     }
 
-    return Itinerarie(id: id, name: bus!.busName!, divsPerLine: divsPerLine, stops: stops);
+    return Itinerarie(id: id, name: bus!.busName! , divsPerLine: divsPerLine, stops: stops);
   }
 
   void _generateBuses() async {

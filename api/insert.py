@@ -1,6 +1,6 @@
 import requests
 
-base_url = "http://51.138.34.104/"
+base_url = "http://4.175.122.244/"
 
 result = requests.post(f"{base_url}route/create", json={"route_name": "Linha 11", "route_number": 11})
 route_id = result.json()["route_id"]

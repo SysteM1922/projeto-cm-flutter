@@ -17,8 +17,9 @@ import 'package:projeto_cm_flutter/screens/schedule_screen.dart';
 import 'package:projeto_cm_flutter/services/database_service.dart'; // DatabaseService to get the singleton instance
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key, this.stopId});
+  const MapScreen({super.key, this.stopId, this.internetModal = false});
   final String? stopId;
+  final bool internetModal;
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -49,8 +50,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
-    _getMarkers(widget.stopId);
-
     _requestLocationPermission();
     _listenToLocationServiceStatus();
   }
@@ -59,6 +58,18 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void dispose() {
     _locationServiceStatusStream?.cancel();
     super.dispose();
+  }
+
+  // notify when widget.internetModal changes
+  @override
+  void didUpdateWidget(MapScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    log('${widget.internetModal}');
+    if (widget.internetModal != oldWidget.internetModal) {
+      if (!widget.internetModal) {
+        _getMarkers(widget.stopId);
+      }
+    }
   }
 
   void _markerTapped(models.Stop stop) async {
@@ -150,6 +161,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   Future<void> _getMarkers(String? centerStopId) async {
     List<models.Stop> stops = await dbService.getAllStops();
     models.Stop? savedStop;
+
+    _markersList.clear();
 
     for (var stop in stops) {
       if (stop.latitude == null || stop.longitude == null) {
@@ -418,9 +431,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   alignPositionOnUpdate: _alignOnUpdate,
                   alignDirectionOnUpdate: _alignOnUpdate,
                 ),
-              BusTracker(
-                busTapped: _busTapped,
-              ),
+              if (_markersList.isNotEmpty)
+                BusTracker(
+                  busTapped: _busTapped,
+                ),
             ],
           ),
           Positioned(
