@@ -137,7 +137,7 @@ stop_id5_1 = result.json()["stop_id"]
 result = requests.post(f"{base_url}stop/create", json={"stop_name": "R. 8 de Dezembro", "stop_location_lat": 40.632202, "stop_location_long": -8.611068})
 stop_id5_2 = result.json()["stop_id"]
 
-result = requests.post(f"{base_url}stop/create", json={"stop_name": "R. do Barreiro A", "stop_location_lat": 40.6299278, "stop_location_long": -8.613807})
+result = requests.post(f"{base_url}stop/create", json={"stop_name": "R. do Barreiro A", "stop_location_lat": 40.629822, "stop_location_long": -8.613726})
 stop_id5_3_a = result.json()["stop_id"]
 
 result = requests.post(f"{base_url}stop/create", json={"stop_name": "R. do Barreiro B", "stop_location_lat": 40.62993, "stop_location_long": -8.61381})

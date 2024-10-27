@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -61,13 +62,35 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _markerTapped(models.Stop stop) async {
-    _info = Text(
-      utf8.decode(stop.stopName!.codeUnits),
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-      ),
+    _info = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.touch_app,
+          size: 30,
+          color: Colors.transparent,
+        ),
+        Flexible(
+          flex: 2,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              utf8.decode(stop.stopName!.codeUnits),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+          ),
+        ),
+        Icon(
+          Icons.touch_app,
+          size: 30,
+          color: Colors.green,
+        ),
+      ],
     );
     _moving = true;
     _mapInfo = true;
@@ -79,14 +102,37 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   void _busTapped(
       LatLng position, Itinerarie itinerary, int updateInterval) async {
-    _info = Text(
-      utf8.decode(itinerary.name.codeUnits),
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-      ),
+    _info = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.touch_app,
+          size: 30,
+          color: Colors.transparent,
+        ),
+        Flexible(
+          flex: 2,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              utf8.decode(itinerary.name.codeUnits),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        Icon(
+          Icons.touch_app,
+          size: 30,
+          color: Colors.green,
+        ),
+      ],
     );
+
     _moving = true;
     _mapInfo = true;
     _selected = itinerary.id;
@@ -394,39 +440,44 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           if (_mapInfo)
             Positioned(
               bottom: 100,
-              left: 10,
-              right: 10,
-              child: ElevatedButton(
-                onPressed: () {
-                  _mapInfo = false;
-                  if (mounted) {
-                    setState(() {});
-                  }
-                  Navigator.push(
-                    context,
-                    _selected is models.Stop
-                        ? MaterialPageRoute(
-                            builder: (context) => ScheduleScreen(
-                              stop: _selected,
-                              screenClosed: () {},
+              left: 0,
+              right: 0,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                child: ElevatedButton(
+                  onPressed: () {
+                    _mapInfo = false;
+                    if (mounted) {
+                      setState(() {});
+                    }
+                    Navigator.push(
+                      context,
+                      _selected is models.Stop
+                          ? MaterialPageRoute(
+                              builder: (context) => ScheduleScreen(
+                                stop: _selected,
+                                screenClosed: () {},
+                              ),
+                            )
+                          : MaterialPageRoute(
+                              builder: (context) => BusScreen(
+                                busId: _selected,
+                              ),
                             ),
-                          )
-                        : MaterialPageRoute(
-                            builder: (context) => BusScreen(
-                              busId: _selected,
-                            ),
-                          ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.all(20),
-                  elevation: 5,
-                  side: BorderSide(color: Colors.grey, width: 1),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20.0),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    elevation: 1,
+                    side: BorderSide(color: Colors.grey, width: 1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(45.0),
+                    ),
+                  ),
+                  child: SizedBox(
+                    height: 70,
+                    child: _info,
                   ),
                 ),
-                child: _info,
               ),
             ),
         ],
