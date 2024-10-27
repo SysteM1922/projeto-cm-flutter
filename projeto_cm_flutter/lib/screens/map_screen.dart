@@ -25,29 +25,6 @@ class MapScreen extends StatefulWidget {
 
   @override
   State<MapScreen> createState() => _MapScreenState();
-
-  static List<String> _names = [
-    "Stop 1",
-    "Stop 2",
-    "Stop 3",
-    "Stop 4",
-    "Stop 5",
-    "Stop 6",
-    "Stop 7",
-    "Stop 8",
-    "Stop 9",
-    "Stop 10",
-    "Bus 1",
-    "Bus 2",
-    "Bus 3",
-    "Bus 4",
-    "Bus 5",
-    "Bus 6",
-    "Bus 7",
-    "Bus 8",
-    "Bus 9",
-    "Bus 10"
-  ];
 }
 
 class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
@@ -73,6 +50,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   late TextEditingController _searchController;
 
+  final Map<String, dynamic> _nameToData = {}; // JUST STOPS
+  bool _isMarkerTapped = false;
+  String? _selectedMarkerId;
+
   @override
   void initState() {
     super.initState();
@@ -81,24 +62,60 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _listenToLocationServiceStatus();
 
     _searchController = TextEditingController();
+
+    _fetchStopAndBusNames();
   }
 
   @override
   void dispose() {
     _locationServiceStatusStream?.cancel();
     super.dispose();
+
+    _searchController.dispose();
   }
 
-  List<String> _searchResults = []; // List to store search results
+  List<String> _searchResults = [];
 
   void _handleSearch() {
     String searchText = _searchController.text.toLowerCase();
     _searchResults.clear();
-    for (var name in MapScreen._names) {
+    _nameToData.forEach((name, data) {
       if (name.toLowerCase().contains(searchText)) {
         _searchResults.add(name);
       }
+    });
+    setState(() {});
+  }
+
+  void _handleResultSelection(String result) {
+    log("Selected: $result");
+
+    // Close keyboard
+    FocusScope.of(context).unfocus();
+
+    // Access the data associated with the selected name
+    final selectedData = _nameToData[result];
+
+    if (selectedData is models.Stop) {
+      // Handle stop selection
+      _markerTapped(selectedData);
     }
+
+    // Clear search results
+    _searchController.clear();
+    _searchResults.clear();
+    setState(() {});
+  }
+
+  Future<void> _fetchStopAndBusNames() async {
+    final List<models.Stop> stops = await dbService.getAllStops();
+
+    for (var stop in stops) {
+      _nameToData[utf8.decode(stop.stopName!.codeUnits)] = stop;
+    }
+
+    log("Data: $_nameToData");
+
     setState(() {});
   }
 
@@ -114,6 +131,16 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _markerTapped(models.Stop stop) async {
+    _isMarkerTapped = true;
+
+    // Close the keyboard
+    FocusScope.of(context).unfocus();
+
+    // Set the selected marker ID to the tapped stop’s ID
+    _selectedMarkerId = stop.serverId;
+
+    await _getMarkers(null);
+
     _info = Row(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -222,7 +249,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           },
           child: Icon(
             Icons.location_on,
-            color: Colors.red,
+            color:
+                stop.serverId == _selectedMarkerId ? Colors.green : Colors.red,
             size: 40.0,
             shadows: [
               Shadow(
@@ -443,12 +471,15 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     _toOption1();
                   }
                 }
-                if (!_moving && _mapInfo) {
+                if (event is MapEventTap && !_isMarkerTapped && _mapInfo) {
                   _mapInfo = false;
-                  if (mounted) {
-                    setState(() {});
-                  }
+                  // refresh colors
+                  _selectedMarkerId = null;
+                  _getMarkers(null);  
+                  setState(() {});
                 }
+
+                _isMarkerTapped = false;
               },
             ),
             children: [
@@ -507,7 +538,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                         _handleSearch();
                       },
                       decoration: InputDecoration(
-                        hintText: "Search for stops or buses...",
+                        hintText: "Search for stops...",
                         border: InputBorder.none,
                       ),
                     ),
@@ -548,20 +579,42 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     ),
                   ],
                 ),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _searchResults.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(_searchResults[index]),
-                      onTap: () {
-                        // Handle search result selection here
-                        // For example, you could filter markers, center the map, or navigate to a specific screen
-                        log("Selected: ${_searchResults[index]}");
-                      },
-                    );
-                  },
-                ),
+                child: _searchResults.length > 3
+                    ? SizedBox(
+                        height: 200, // Adjust the height as needed
+                        child: Scrollbar(
+                          thickness: 4.0,
+                          child: ListView.builder(
+                            itemCount: _searchResults.length,
+                            itemBuilder: (context, index) {
+                              return ListTile(
+                                title: Text(_searchResults[index]),
+                                subtitle: Text("Tap to see more",
+                                    style: TextStyle(
+                                        color: Colors.grey, fontSize: 12)),
+                                onTap: () {
+                                  _handleResultSelection(_searchResults[index]);
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _searchResults.length,
+                        itemBuilder: (context, index) {
+                          return ListTile(
+                            title: Text(_searchResults[index]),
+                            subtitle: Text("Tap to see more",
+                                style: TextStyle(
+                                    color: Colors.grey, fontSize: 12)),
+                            onTap: () {
+                              _handleResultSelection(_searchResults[index]);
+                            },
+                          );
+                        },
+                      ),
               ),
             ),
           if (_mapInfo)
