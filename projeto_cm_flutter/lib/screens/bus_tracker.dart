@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
@@ -38,8 +36,6 @@ class _BusTrackerState extends State<BusTracker> {
   static LatLng _position1 = LatLng(0, 0);
   static LatLng _position2 = LatLng(0, 0);
   static LatLng _position3 = LatLng(0, 0);
-
-  static LatLng _selectedPosition = LatLng(0, 0);
 
   late Itinerarie _it1;
   late Itinerarie _it2;
@@ -143,8 +139,6 @@ class _BusTrackerState extends State<BusTracker> {
             widget.busTapped(
               _position1, _it1, _updateIntervalSeconds
             );
-            _selectedPosition = _position1;
-            setState(() {});
           },
           child: Icon(
             Icons.directions_bus,
@@ -169,8 +163,6 @@ class _BusTrackerState extends State<BusTracker> {
             widget.busTapped(
               _position2, _it2, _updateIntervalSeconds
             );
-            _selectedPosition = _position2;
-            setState(() {});
           },
           child: Icon(
             Icons.directions_bus,
@@ -195,8 +187,6 @@ class _BusTrackerState extends State<BusTracker> {
             widget.busTapped(
               _position3, _it3, _updateIntervalSeconds
             );
-            _selectedPosition = _position3;
-            setState(() {});
           },
           child: Icon(
             Icons.directions_bus,
