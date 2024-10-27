@@ -18,6 +18,7 @@ class IsarService {
         models.RouteSchema,
         models.BusSchema,
         models.BusStopSchema,
+        models.TravelHistorySchema,
       ],
       directory: dir.path,
     );

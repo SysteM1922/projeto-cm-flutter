@@ -88,3 +88,20 @@ class BusStop {
     return busStop;
   }
 }
+
+
+@collection
+class TravelHistory {
+  Id id = Isar.autoIncrement;
+  String? routeNumber;
+  DateTime? date;
+
+  TravelHistory();
+
+  factory TravelHistory.fromJson(Map<String, dynamic> json) {
+    final history = TravelHistory()
+      ..routeNumber = json['route_number']
+      ..date = DateTime.parse(json['date']);
+    return history;
+  }
+}
