@@ -199,7 +199,7 @@ class _UserScreenState extends State<UserScreen> {
     await FirebaseAuth.instance.signOut();
     await _storage.deleteAll();
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setBool('biometrics', false);
+    prefs.clear();
 
     // Clear travel history from User
     await _databaseService.clearTravelHistory();

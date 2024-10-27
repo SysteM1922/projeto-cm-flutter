@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -21,7 +22,7 @@ class _AppState extends State<App> {
       _connectionServiceStatusStream;
   final DatabaseService dbService = DatabaseService.getInstance();
 
-  static bool _isUpdatingDataBase = false;
+  static bool? _isUpdatingDataBase;
   bool _internetModal = false;
 
   final Icon _wifiIcon = Icon(Icons.wifi_off, color: Colors.red);
@@ -97,6 +98,7 @@ class _AppState extends State<App> {
       _checkDataBaseStatus().then((_) {
         if (!mounted) return;
         setState(() {
+          _isUpdatingDataBase = false;
           _internetModal = false;
         });
       });
@@ -113,10 +115,6 @@ class _AppState extends State<App> {
         _isUpdatingDataBase = true;
       });
       dbService.updateDatabase(() {
-        if (!mounted) return;
-        setState(() {
-          _isUpdatingDataBase = false;
-        });
       }).then((_) {
         return;
       });
@@ -124,6 +122,7 @@ class _AppState extends State<App> {
       _showConnectionDialog(
           "An error occurred while checking the database status. Please check your internet connection.");
     }
+    return;
   }
 
   @override
@@ -157,7 +156,7 @@ class _AppState extends State<App> {
                   child: _wifiIcon,
                 ),
               ),
-            if (_isUpdatingDataBase)
+            if (_isUpdatingDataBase != null && _isUpdatingDataBase!)
               Container(
                 color: Colors.black45,
                 child: AlertDialog(

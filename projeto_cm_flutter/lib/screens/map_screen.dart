@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,9 +18,9 @@ import 'package:projeto_cm_flutter/screens/schedule_screen.dart';
 import 'package:projeto_cm_flutter/services/database_service.dart'; // DatabaseService to get the singleton instance
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key, this.stopId, this.isUpdatingDataBase = false});
+  const MapScreen({super.key, this.stopId, this.isUpdatingDataBase});
   final String? stopId;
-  final bool isUpdatingDataBase;
+  final bool? isUpdatingDataBase;
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -78,10 +77,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void didUpdateWidget(MapScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
-      if (!widget.isUpdatingDataBase) {
-        _getMarkers(widget.stopId);
-        _canTrackBuses = true;
-        setState(() {});
+      if (widget.isUpdatingDataBase != null && !widget.isUpdatingDataBase!) {
+        _getMarkers(widget.stopId).then((_) {
+          _canTrackBuses = true;
+        });
       }
     }
   }
@@ -271,6 +270,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     }
     setState(() {});
     if (savedStop != null) _markerTapped(savedStop);
+    return;
   }
 
   void _showLocationDialog(message) {
@@ -551,12 +551,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   alignDirectionOnUpdate: _alignOnUpdate,
                 ),
               ),
-              Visibility(
-                visible: _canTrackBuses,
-                child: BusTracker(
+              if( _canTrackBuses)
+                BusTracker(
                   busTapped: _busTapped,
                 ),
-              ),
             ],
           ),
           Visibility(
@@ -644,32 +642,30 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   ),
                 ],
               ),
-              child: Flexible(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) {
-                      _handleSearch();
-                    },
-                    decoration: InputDecoration(
-                      hintText: "Search for stops...",
-                      floatingLabelBehavior: FloatingLabelBehavior.never,
-                      hintStyle: TextStyle(color: Colors.grey[400]),
-                      border: InputBorder.none,
-                      prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              onPressed: () {
-                                _searchController.clear();
-                                _searchResults.clear();
-                                setState(() {});
-                              },
-                              icon: Icon(Icons.close, color: Colors.grey[600]))
-                          : null,
-                    ),
-                    textAlignVertical: TextAlignVertical.center,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    _handleSearch();
+                  },
+                  decoration: InputDecoration(
+                    hintText: "Search for stops...",
+                    floatingLabelBehavior: FloatingLabelBehavior.never,
+                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    border: InputBorder.none,
+                    prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            onPressed: () {
+                              _searchController.clear();
+                              _searchResults.clear();
+                              setState(() {});
+                            },
+                            icon: Icon(Icons.close, color: Colors.grey[600]))
+                        : null,
                   ),
+                  textAlignVertical: TextAlignVertical.center,
                 ),
               ),
             ),
