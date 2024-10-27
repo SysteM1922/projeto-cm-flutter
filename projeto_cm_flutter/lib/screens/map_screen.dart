@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
@@ -23,6 +25,29 @@ class MapScreen extends StatefulWidget {
 
   @override
   State<MapScreen> createState() => _MapScreenState();
+
+  static List<String> _names = [
+    "Stop 1",
+    "Stop 2",
+    "Stop 3",
+    "Stop 4",
+    "Stop 5",
+    "Stop 6",
+    "Stop 7",
+    "Stop 8",
+    "Stop 9",
+    "Stop 10",
+    "Bus 1",
+    "Bus 2",
+    "Bus 3",
+    "Bus 4",
+    "Bus 5",
+    "Bus 6",
+    "Bus 7",
+    "Bus 8",
+    "Bus 9",
+    "Bus 10"
+  ];
 }
 
 class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
@@ -46,18 +71,35 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   static List<Marker> _markersList = [];
 
+  late TextEditingController _searchController;
+
   @override
   void initState() {
     super.initState();
 
     _requestLocationPermission();
     _listenToLocationServiceStatus();
+
+    _searchController = TextEditingController();
   }
 
   @override
   void dispose() {
     _locationServiceStatusStream?.cancel();
     super.dispose();
+  }
+
+  List<String> _searchResults = []; // List to store search results
+
+  void _handleSearch() {
+    String searchText = _searchController.text.toLowerCase();
+    _searchResults.clear();
+    for (var name in MapScreen._names) {
+      if (name.toLowerCase().contains(searchText)) {
+        _searchResults.add(name);
+      }
+    }
+    setState(() {});
   }
 
   // notify when widget.internetModal changes
@@ -437,6 +479,44 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             ],
           ),
           Positioned(
+            top: 35.0,
+            left: 10.0,
+            right: 10.0,
+            child: Container(
+              height: 50,
+              padding: EdgeInsets.symmetric(horizontal: 10.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(30.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.5),
+                    spreadRadius: 2,
+                    blurRadius: 5,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.search),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        _handleSearch();
+                      },
+                      decoration: InputDecoration(
+                        hintText: "Search for stops or buses...",
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
             bottom: 20,
             right: 10,
             child: ElevatedButton(
@@ -450,6 +530,40 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               child: _gpsIcon,
             ),
           ),
+          if (_searchResults.isNotEmpty && _searchController.text.isNotEmpty)
+            Positioned(
+              top: 90.0,
+              left: 10.0,
+              right: 10.0,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.5),
+                      spreadRadius: 2,
+                      blurRadius: 5,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _searchResults.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text(_searchResults[index]),
+                      onTap: () {
+                        // Handle search result selection here
+                        // For example, you could filter markers, center the map, or navigate to a specific screen
+                        log("Selected: ${_searchResults[index]}");
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
           if (_mapInfo)
             Positioned(
               bottom: 100,
