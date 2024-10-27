@@ -1,35 +1,49 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:latlong2/latlong.dart' as latlong;
+import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:projeto_cm_flutter/isar/models.dart' as models;
+import 'package:projeto_cm_flutter/services/database_service.dart';
 
 class Itinerarie {
   final String id;
+  final String name;
   final int divsPerLine;
-  final List<latlong.LatLng> stops;
+  final List<LatLng> stops;
 
   Itinerarie({
     required this.id,
+    required this.name,
     required this.divsPerLine,
     required this.stops,
   });
 }
 
 class BusTracker extends StatefulWidget {
-  const BusTracker({Key? key}) : super(key: key);
+  const BusTracker({super.key, required this.busTapped});
+  final Function busTapped;
 
   @override
   _BusTrackerState createState() => _BusTrackerState();
 }
 
 class _BusTrackerState extends State<BusTracker> {
-  int _updateIntervalSeconds = 1;
+  DatabaseService dbService = DatabaseService.getInstance();
+  final int _updateIntervalSeconds = 1;
 
-  latlong.LatLng _position1 = latlong.LatLng(0, 0);
-  latlong.LatLng _position2 = latlong.LatLng(0, 0);
-  latlong.LatLng _position3 = latlong.LatLng(0, 0);
+  static LatLng _position1 = LatLng(0, 0);
+  static LatLng _position2 = LatLng(0, 0);
+  static LatLng _position3 = LatLng(0, 0);
+
+  static LatLng _selectedPosition = LatLng(0, 0);
+
+  late Itinerarie _it1;
+  late Itinerarie _it2;
+  late Itinerarie _it3;
 
   @override
   void initState() {
@@ -43,31 +57,33 @@ class _BusTrackerState extends State<BusTracker> {
     super.dispose();
   }
 
-  Itinerarie _generateItinerary(String path) {
+  Future<Itinerarie> _generateItinerary(String path) async {
     List<String> lines = path.split('\n');
-    String id = lines[0];
+    String id = lines[0].toString().trim();
+    models.Bus? bus = await dbService.getBusById(id);
+
     int divsPerLine = int.parse(lines[1]);
-    List<latlong.LatLng> stops = [];
+    List<LatLng> stops = [];
     for (int i = 2; i < lines.length; i++) {
       List<String> coords = lines[i].split(' ');
       double lat = double.parse(coords[0]);
       double long = double.parse(coords[1]);
 
       if (i > 2) {
-        latlong.LatLng lastStop = stops[stops.length - 1];
+        LatLng lastStop = stops[stops.length - 1];
         double latDiff = (lat - lastStop.latitude) / divsPerLine;
         double longDiff = (long - lastStop.longitude) / divsPerLine;
 
         for (int j = 0; j < divsPerLine; j++) {
-          stops.add(latlong.LatLng(lastStop.latitude + latDiff * j,
+          stops.add(LatLng(lastStop.latitude + latDiff * j,
               lastStop.longitude + longDiff * j));
         }
       }
 
-      stops.add(latlong.LatLng(lat, long));
+      stops.add(LatLng(lat, long));
     }
 
-    return Itinerarie(id: id, divsPerLine: divsPerLine, stops: stops);
+    return Itinerarie(id: id, name: bus!.busName!, divsPerLine: divsPerLine, stops: stops);
   }
 
   void _generateBuses() async {
@@ -78,33 +94,33 @@ class _BusTrackerState extends State<BusTracker> {
     final String linha5_solposto =
         await rootBundle.loadString('assets/itineraries/linha_5_solposto.txt');
 
-    Itinerarie it1 = _generateItinerary(linha11);
-    Itinerarie it2 = _generateItinerary(linha5_santiago);
-    Itinerarie it3 = _generateItinerary(linha5_solposto);
+    _it1 = await _generateItinerary(linha11);
+    _it2 = await _generateItinerary(linha5_santiago);
+    _it3 = await _generateItinerary(linha5_solposto);
 
     int bus1Index = _updateIntervalSeconds;
     int bus2Index = _updateIntervalSeconds;
     int bus3Index = _updateIntervalSeconds;
 
-    _position1 = it1.stops[bus1Index];
-    _position2 = it2.stops[bus2Index];
-    _position3 = it3.stops[bus3Index];
+    _position1 = _it1.stops[bus1Index];
+    _position2 = _it2.stops[bus2Index];
+    _position3 = _it3.stops[bus3Index];
 
     while (true) {
       await Future.delayed(Duration(seconds: _updateIntervalSeconds));
-      if (bus1Index >= it1.stops.length) {
+      if (bus1Index >= _it1.stops.length) {
         bus1Index = 0;
       }
-      if (bus2Index >= it2.stops.length) {
+      if (bus2Index >= _it2.stops.length) {
         bus2Index = 0;
       }
-      if (bus3Index >= it3.stops.length) {
+      if (bus3Index >= _it3.stops.length) {
         bus3Index = 0;
       }
 
-      _position1 = it1.stops[bus1Index];
-      _position2 = it2.stops[bus2Index];
-      _position3 = it3.stops[bus3Index];
+      _position1 = _it1.stops[bus1Index];
+      _position2 = _it2.stops[bus2Index];
+      _position3 = _it3.stops[bus3Index];
 
       bus1Index += _updateIntervalSeconds;
       bus2Index += _updateIntervalSeconds;
@@ -124,10 +140,14 @@ class _BusTrackerState extends State<BusTracker> {
         point: _position1,
         child: GestureDetector(
           onTap: () {
-            log('Bus 1 tapped');
+            widget.busTapped(
+              _position1, _it1, _updateIntervalSeconds
+            );
+            _selectedPosition = _position1;
+            setState(() {});
           },
           child: Icon(
-            Icons.directions_bus_filled,
+            Icons.directions_bus,
             color: Colors.purple,
             size: 40.0,
             shadows: [
@@ -146,10 +166,14 @@ class _BusTrackerState extends State<BusTracker> {
         point: _position2,
         child: GestureDetector(
           onTap: () {
-            log('Bus 2 tapped');
+            widget.busTapped(
+              _position2, _it2, _updateIntervalSeconds
+            );
+            _selectedPosition = _position2;
+            setState(() {});
           },
           child: Icon(
-            Icons.directions_bus_filled,
+            Icons.directions_bus,
             color: Colors.green,
             size: 40.0,
             shadows: [
@@ -168,10 +192,14 @@ class _BusTrackerState extends State<BusTracker> {
         point: _position3,
         child: GestureDetector(
           onTap: () {
-            log('Bus 3 tapped');
+            widget.busTapped(
+              _position3, _it3, _updateIntervalSeconds
+            );
+            _selectedPosition = _position3;
+            setState(() {});
           },
           child: Icon(
-            Icons.directions_bus_filled,
+            Icons.directions_bus,
             color: Colors.green,
             size: 40.0,
             shadows: [

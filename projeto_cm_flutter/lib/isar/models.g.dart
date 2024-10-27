@@ -2180,8 +2180,13 @@ const BusSchema = CollectionSchema(
       name: r'busName',
       type: IsarType.string,
     ),
-    r'serverId': PropertySchema(
+    r'routeId': PropertySchema(
       id: 1,
+      name: r'routeId',
+      type: IsarType.string,
+    ),
+    r'serverId': PropertySchema(
+      id: 2,
       name: r'serverId',
       type: IsarType.string,
     )
@@ -2234,6 +2239,12 @@ int _busEstimateSize(
     }
   }
   {
+    final value = object.routeId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
     final value = object.serverId;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
@@ -2249,7 +2260,8 @@ void _busSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeString(offsets[0], object.busName);
-  writer.writeString(offsets[1], object.serverId);
+  writer.writeString(offsets[1], object.routeId);
+  writer.writeString(offsets[2], object.serverId);
 }
 
 Bus _busDeserialize(
@@ -2261,7 +2273,8 @@ Bus _busDeserialize(
   final object = Bus();
   object.busName = reader.readStringOrNull(offsets[0]);
   object.id = id;
-  object.serverId = reader.readStringOrNull(offsets[1]);
+  object.routeId = reader.readStringOrNull(offsets[1]);
+  object.serverId = reader.readStringOrNull(offsets[2]);
   return object;
 }
 
@@ -2275,6 +2288,8 @@ P _busDeserializeProp<P>(
     case 0:
       return (reader.readStringOrNull(offset)) as P;
     case 1:
+      return (reader.readStringOrNull(offset)) as P;
+    case 2:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -2684,6 +2699,150 @@ extension BusQueryFilter on QueryBuilder<Bus, Bus, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Bus, Bus, QAfterFilterCondition> routeIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'routeId',
+      ));
+    });
+  }
+
+  QueryBuilder<Bus, Bus, QAfterFilterCondition> routeIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'routeId',
+      ));
+    });
+  }
+
+  QueryBuilder<Bus, Bus, QAfterFilterCondition> routeIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'routeId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Bus, Bus, QAfterFilterCondition> routeIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'routeId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Bus, Bus, QAfterFilterCondition> routeIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'routeId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Bus, Bus, QAfterFilterCondition> routeIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'routeId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Bus, Bus, QAfterFilterCondition> routeIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'routeId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Bus, Bus, QAfterFilterCondition> routeIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'routeId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Bus, Bus, QAfterFilterCondition> routeIdContains(String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'routeId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Bus, Bus, QAfterFilterCondition> routeIdMatches(String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'routeId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Bus, Bus, QAfterFilterCondition> routeIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'routeId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Bus, Bus, QAfterFilterCondition> routeIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'routeId',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<Bus, Bus, QAfterFilterCondition> serverIdIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -2902,6 +3061,18 @@ extension BusQuerySortBy on QueryBuilder<Bus, Bus, QSortBy> {
     });
   }
 
+  QueryBuilder<Bus, Bus, QAfterSortBy> sortByRouteId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'routeId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Bus, Bus, QAfterSortBy> sortByRouteIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'routeId', Sort.desc);
+    });
+  }
+
   QueryBuilder<Bus, Bus, QAfterSortBy> sortByServerId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'serverId', Sort.asc);
@@ -2940,6 +3111,18 @@ extension BusQuerySortThenBy on QueryBuilder<Bus, Bus, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Bus, Bus, QAfterSortBy> thenByRouteId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'routeId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Bus, Bus, QAfterSortBy> thenByRouteIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'routeId', Sort.desc);
+    });
+  }
+
   QueryBuilder<Bus, Bus, QAfterSortBy> thenByServerId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'serverId', Sort.asc);
@@ -2961,6 +3144,13 @@ extension BusQueryWhereDistinct on QueryBuilder<Bus, Bus, QDistinct> {
     });
   }
 
+  QueryBuilder<Bus, Bus, QDistinct> distinctByRouteId(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'routeId', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<Bus, Bus, QDistinct> distinctByServerId(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -2979,6 +3169,12 @@ extension BusQueryProperty on QueryBuilder<Bus, Bus, QQueryProperty> {
   QueryBuilder<Bus, String?, QQueryOperations> busNameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'busName');
+    });
+  }
+
+  QueryBuilder<Bus, String?, QQueryOperations> routeIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'routeId');
     });
   }
 

@@ -52,6 +52,7 @@ class Bus {
   @Index(unique: true)
   String? serverId;
   String? busName;
+  String? routeId;
   final busStops = IsarLinks<BusStop>();
 
   Bus();
@@ -59,7 +60,8 @@ class Bus {
   factory Bus.fromJson(Map<String, dynamic> json) {
     final bus = Bus()
       ..serverId = json['id']
-      ..busName = json['bus_name'];
+      ..busName = json['bus_name']
+      ..routeId = json['route_id'];
     return bus;
   }
 }

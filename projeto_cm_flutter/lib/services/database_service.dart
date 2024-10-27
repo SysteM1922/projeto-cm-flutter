@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -47,7 +46,7 @@ class DatabaseService {
   Future<models.Bus?> getBusById(String busId) async {
     return await isar.bus.filter().serverIdEqualTo(busId).findFirst();
   }
-
+  
   Future<models.Stop?> getStopByServerId(String stopId) async {
     return await isar.stops.filter().serverIdEqualTo(stopId).findFirst();
   }
@@ -99,37 +98,52 @@ class DatabaseService {
           await isar.busStops.clear();
         });
 
-        // Parse and insert data
-        List<models.BusStop> busStopList =
-            busStops.map((json) => models.BusStop.fromJson(json)).toList();
-
-        List<models.Route> routeList = routes.map((json) {
-          models.Route routeModel = models.Route.fromJson(json);
-          routeModel.busStops.addAll(busStopList
-              .where((element) => element.routeId == routeModel.serverId));
-          return routeModel;
-        }).toList();
-
-        List<models.Stop> stopList = stops.map((json) {
-          models.Stop stopModel = models.Stop.fromJson(json);
-          stopModel.busStops.addAll(busStopList
-              .where((element) => element.stopId == stopModel.serverId));
-          return stopModel;
-        }).toList();
-
-        List<models.Bus> busList = buses.map((json) {
-          models.Bus busModel = models.Bus.fromJson(json);
-          busModel.busStops.addAll(busStopList
-              .where((element) => element.busId == busModel.serverId));
-          return busModel;
-        }).toList();
-
-        // Insert data into Isar
         await isar.writeTxn(() async {
+          // Parse and insert data
+          List<models.BusStop> busStopList =
+              busStops.map((json) => models.BusStop.fromJson(json)).toList();
+
+          List<models.Bus> busList = buses.map((json) {
+            models.Bus busModel = models.Bus.fromJson(json);
+            busModel.busStops.addAll(busStopList
+                .where((element) => element.busId == busModel.serverId));
+            return busModel;
+          }).toList();
+
+          List<models.Route> routeList = routes.map((json) {
+            models.Route routeModel = models.Route.fromJson(json);
+            routeModel.busStops.addAll(busStopList
+                .where((element) => element.routeId == routeModel.serverId));
+            routeModel.buses.addAll(busList
+                .where((element) => element.routeId == routeModel.serverId));
+            return routeModel;
+          }).toList();
+
+          List<models.Stop> stopList = stops.map((json) {
+            models.Stop stopModel = models.Stop.fromJson(json);
+            stopModel.busStops.addAll(busStopList
+                .where((element) => element.stopId == stopModel.serverId));
+            return stopModel;
+          }).toList();
+
+          // Insert data into Isar
           await isar.busStops.putAll(busStopList);
           await isar.routes.putAll(routeList);
           await isar.stops.putAll(stopList);
           await isar.bus.putAll(busList);
+
+          for (var bus in busList) {
+            bus.busStops.save();
+          }
+
+          for (var stop in stopList) {
+            stop.busStops.save();
+          }
+
+          for (var route in routeList) {
+            route.busStops.save();
+            route.buses.save();
+          }
         });
 
         await _storage.write(key: 'last_update', value: lastUpdate);

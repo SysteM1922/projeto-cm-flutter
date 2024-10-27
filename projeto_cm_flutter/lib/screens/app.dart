@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -27,6 +26,9 @@ class _AppState extends State<App> {
 
   final Icon _wifiIcon = Icon(Icons.wifi_off, color: Colors.red);
 
+  int _selectedTab = 0;
+  String? _centerStopId;
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +40,18 @@ class _AppState extends State<App> {
   void dispose() {
     _connectionServiceStatusStream.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+    if (args != null) {
+      setState(() {
+        _selectedTab = args['selectedTab'];
+        _centerStopId = args['centerStopId'];
+      });
+    }
   }
 
   void _showConnectionDialog(String message) {
@@ -117,17 +131,17 @@ class _AppState extends State<App> {
     return DefaultTabController(
       animationDuration: const Duration(milliseconds: 0),
       length: 4,
-      initialIndex: 0,
+      initialIndex: _selectedTab,
       child: Scaffold(
         body: Stack(
           children: [
-            const TabBarView(
-              physics: NeverScrollableScrollPhysics(),
+            TabBarView(
+              physics: const NeverScrollableScrollPhysics(),
               children: <Widget>[
-                BusTrackingScreen(),
-                ScanQRCodeScreen(),
-                NFCScreen(),
-                UserScreen(),
+                MapScreen(stopId: _centerStopId),
+                const ScanQRCodeScreen(),
+                const NFCScreen(),
+                const UserScreen(),
               ],
             ),
             if (_internetModal)

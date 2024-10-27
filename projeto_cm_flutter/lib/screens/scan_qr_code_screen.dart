@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -72,6 +70,8 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
     if (status.isPermanentlyDenied) {
       _showDialog('Please enable camera permissions to use this feature.');
     }
+
+    cameraController.start();
   }
 
   void _foundBarcode(BarcodeCapture barcodeCapture) async {
@@ -183,7 +183,6 @@ class _ScanQRCodeScreenState extends State<ScanQRCodeScreen> {
                 return GestureDetector(
                   onTap: () {
                     _checkCameraPermissions();
-                    cameraController.start();
                   },
                   child: ColoredBox(
                     color: Colors.black,

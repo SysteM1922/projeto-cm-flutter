@@ -73,7 +73,8 @@ class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
               TextButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    //DefaultTabController.of(context).animateTo(0);
+                    Navigator.pushNamed(context, '/app',
+                        arguments: {'selectedTab': 0});
                   },
                   child: Text('Cancel',
                       style: TextStyle(color: Colors.blue[800]))),

@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:projeto_cm_flutter/screens/route_screen.dart';
-import 'package:projeto_cm_flutter/services/database_service.dart'; 
+import 'package:projeto_cm_flutter/screens/bus_screen.dart';
+import 'package:projeto_cm_flutter/services/database_service.dart';
 
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
 
@@ -10,7 +10,8 @@ class ScheduleScreen extends StatefulWidget {
   final models.Stop stop;
   final VoidCallback screenClosed;
 
-  const ScheduleScreen({Key? key, required this.stop, required this.screenClosed}) : super(key: key);
+  const ScheduleScreen(
+      {super.key, required this.stop, required this.screenClosed});
 
   @override
   _ScheduleScreenState createState() => _ScheduleScreenState();
@@ -26,18 +27,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   void initState() {
     super.initState();
 
-    // print("Stop_id: ${widget.stop.serverId}");
-
     fetchBusSchedules();
   }
 
   Future<void> fetchBusSchedules() async {
     try {
-      // Query bus stops associated with the stop's serverId
-      final List<models.BusStop> busStops = await dbService.getBusStopsByStopId(widget.stop.serverId ?? '');
-
-      // Process arrival times to keep only the earliest arrival for each bus_id
-      List<models.BusStop> processedArrivalTimes = processArrivalTimes(busStops);
+      List<models.BusStop> processedArrivalTimes =
+          processArrivalTimes(widget.stop.busStops.toList());
 
       if (!mounted) {
         return;
@@ -101,7 +97,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Stop Schedule"),
+        surfaceTintColor: Colors.white,
+        shadowColor: Colors.black,
+        title: Text(
+          stopName,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
         leading: IconButton(
           onPressed: () {
@@ -115,20 +119,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           ? const Center(child: CircularProgressIndicator())
           : arrivalTimes.isNotEmpty
               ? Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding:
+                      const EdgeInsets.only(left: 16, right: 16, bottom: 32),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Center(
-                        child: Text(
-                          'Stop: $stopName',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
                       Expanded(
                         child: ListView.builder(
                           itemCount: arrivalTimes.length,
@@ -146,14 +141,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildBusScheduleCard(models.BusStop schedule) {
-    String arrivalTime = schedule.arrivalTime?.toLocal().toString().substring(11, 16) ?? '--:--';
-    String routeNumber = '';
+    String arrivalTime =
+        schedule.arrivalTime?.toLocal().toString().substring(11, 16) ?? '--:--';
+    String busName = '';
 
-    return FutureBuilder<models.Route?>(
-      future: dbService.getRouteById(schedule.routeId ?? ''),
+    return FutureBuilder<models.Bus?>(
+      future: dbService.getBusById(schedule.busId ?? ''),
       builder: (context, snapshot) {
         if (snapshot.hasData && snapshot.data != null) {
-          routeNumber = snapshot.data!.routeNumber?.toString() ?? '';
+          busName = snapshot.data!.busName?.toString() ?? '';
         }
 
         return Card(
@@ -161,7 +157,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             borderRadius: BorderRadius.circular(15.0),
           ),
           elevation: 5,
-          margin: const EdgeInsets.symmetric(vertical: 10),
+          margin: const EdgeInsets.only(top: 20),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -170,14 +166,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.directions_bus, size: 40, color: Colors.blue),
+                    const Icon(Icons.directions_bus,
+                        size: 40, color: Colors.blue),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
-                        "Route: $routeNumber",
+                        busName,
                         style: const TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w500,
                           color: Colors.black87,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -210,7 +207,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (context) =>
-                                RouteScreen(routeId: schedule.routeId ?? ''),
+                                BusScreen(busId: schedule.busId ?? ''),
                           ),
                         );
                       },

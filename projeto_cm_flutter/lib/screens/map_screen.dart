@@ -1,37 +1,36 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:permission_handler/permission_handler.dart' as permission;
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
+import 'package:projeto_cm_flutter/screens/bus_screen.dart';
 import 'package:projeto_cm_flutter/screens/bus_tracker.dart';
 import 'package:projeto_cm_flutter/screens/schedule_screen.dart';
 import 'package:projeto_cm_flutter/services/database_service.dart'; // DatabaseService to get the singleton instance
 
-class BusTrackingScreen extends StatefulWidget {
-  const BusTrackingScreen({super.key});
+class MapScreen extends StatefulWidget {
+  const MapScreen({super.key, this.stopId});
+  final String? stopId;
 
   @override
-  State<BusTrackingScreen> createState() => _BusTrackingScreenState();
+  State<MapScreen> createState() => _MapScreenState();
 }
 
-class _BusTrackingScreenState extends State<BusTrackingScreen>
-    with TickerProviderStateMixin {
+class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   final DatabaseService dbService = DatabaseService.getInstance();
 
   Icon _gpsIcon = Icon(Icons.gps_off, color: Colors.red, size: 35);
 
   late final AnimatedMapController _mapController =
       AnimatedMapController(vsync: this);
-  LatLng center = LatLng(40.63672, -8.65049);
+  LatLng _center = LatLng(40.63672, -8.65049);
   AlignOnUpdate _alignOnUpdate = AlignOnUpdate.never;
 
   int _currentOption = 1;
@@ -39,10 +38,9 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
   bool _mapInfo = false;
   bool _moving = false;
   late Widget _info;
-  late models.Stop _selectedStop;
+  var _selected;
 
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
-  StreamSubscription<List<ConnectivityResult>>? _connectionServiceStatusStream;
 
   static List<Marker> _markersList = [];
 
@@ -50,7 +48,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
   void initState() {
     super.initState();
 
-    _getMarkers();
+    _getMarkers(widget.stopId);
 
     _requestLocationPermission();
     _listenToLocationServiceStatus();
@@ -59,11 +57,10 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
   @override
   void dispose() {
     _locationServiceStatusStream?.cancel();
-    _connectionServiceStatusStream?.cancel();
     super.dispose();
   }
 
-  void _markerTapped(models.Stop stop) {
+  void _markerTapped(models.Stop stop) async {
     _info = Text(
       utf8.decode(stop.stopName!.codeUnits),
       textAlign: TextAlign.center,
@@ -74,9 +71,28 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
     );
     _moving = true;
     _mapInfo = true;
-    _selectedStop = stop;
+    _selected = stop;
     setState(() {});
+
     _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
+  }
+
+  void _busTapped(
+      LatLng position, Itinerarie itinerary, int updateInterval) async {
+    _info = Text(
+      utf8.decode(itinerary.name.codeUnits),
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+    _moving = true;
+    _mapInfo = true;
+    _selected = itinerary.id;
+    setState(() {});
+
+    _mapController.centerOnPoint(position);
     Future.delayed(Duration(milliseconds: 600), () {
       _moving = false;
       if (mounted) {
@@ -85,12 +101,16 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
     });
   }
 
-  Future<void> _getMarkers() async {
+  Future<void> _getMarkers(String? centerStopId) async {
     List<models.Stop> stops = await dbService.getAllStops();
+    models.Stop? savedStop;
 
     for (var stop in stops) {
       if (stop.latitude == null || stop.longitude == null) {
         continue;
+      }
+      if (centerStopId != null && stop.serverId == centerStopId) {
+        savedStop = stop;
       }
       _markersList.add(Marker(
         width: 40.0,
@@ -117,8 +137,11 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
         rotate: true,
       ));
     }
-
+    if (!mounted) {
+      return;
+    }
     setState(() {});
+    if (savedStop != null) _markerTapped(savedStop);
   }
 
   void _showLocationDialog(message) {
@@ -214,8 +237,12 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
         Position position = await Geolocator.getCurrentPosition(
             locationSettings: LocationSettings(
                 accuracy: LocationAccuracy.best, distanceFilter: 10));
-        center = LatLng(position.latitude, position.longitude);
-        _toOption2(position);
+        _center = LatLng(position.latitude, position.longitude);
+        if (widget.stopId == null) {
+          _toOption2(position);
+        } else {
+          _toOption1();
+        }
       } else if (permission == LocationPermission.deniedForever) {
         _gpsOn = false;
         _showEnableLocationDialog();
@@ -301,7 +328,7 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
           FlutterMap(
             mapController: _mapController.mapController,
             options: MapOptions(
-              initialCenter: center,
+              initialCenter: _center,
               initialZoom: 16.0,
               minZoom: 7.0,
               maxZoom: 18.0,
@@ -345,7 +372,9 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
                   alignPositionOnUpdate: _alignOnUpdate,
                   alignDirectionOnUpdate: _alignOnUpdate,
                 ),
-              BusTracker()
+              BusTracker(
+                busTapped: _busTapped,
+              ),
             ],
           ),
           Positioned(
@@ -375,12 +404,18 @@ class _BusTrackingScreenState extends State<BusTrackingScreen>
                   }
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => ScheduleScreen(
-                        stop: _selectedStop,
-                        screenClosed: () {},
-                      ),
-                    ),
+                    _selected is models.Stop
+                        ? MaterialPageRoute(
+                            builder: (context) => ScheduleScreen(
+                              stop: _selected,
+                              screenClosed: () {},
+                            ),
+                          )
+                        : MaterialPageRoute(
+                            builder: (context) => BusScreen(
+                              busId: _selected,
+                            ),
+                          ),
                   );
                 },
                 style: ElevatedButton.styleFrom(
