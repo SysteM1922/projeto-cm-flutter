@@ -44,6 +44,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   Widget _info = Container();
   var _selected;
 
+  Widget _busTracker = Container();
+
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
 
   static final List<Marker> _markersList = [];
@@ -76,15 +78,14 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   @override
   void didUpdateWidget(MapScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-
-    if (widget.stopId != oldWidget.stopId && widget.stopId != null) {
-      _centerOnStop(widget.stopId!);
-
-      // Defer the state update to avoid calling setState during build
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final appState = Provider.of<AppState>(context, listen: false);
-        appState.resetCenterStopId();
-      });
+    if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
+      if (widget.isUpdatingDataBase != null && !widget.isUpdatingDataBase!) {
+        _getMarkers(widget.stopId).then((_) {
+          _busTracker = BusTracker(
+            busTapped: _busTapped,
+          );
+        });
+      }
     }
   }
 
