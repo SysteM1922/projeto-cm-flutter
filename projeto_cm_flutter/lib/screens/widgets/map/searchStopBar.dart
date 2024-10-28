@@ -58,7 +58,10 @@ class _SearchStopBarState extends State<SearchStopBar> {
 
     if (selectedData is models.Stop) {
       // Handle stop selection
-      _markerTapped(selectedData);
+      // MAKE SURE EVERYTHING IS LOADED
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+       _markerTapped(selectedData);
+      });
     }
 
     // Clear search results
