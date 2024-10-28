@@ -264,7 +264,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         ),
       );
     }
-    
+
     if (result != null && result['centerStopId'] != null) {
       final appState = Provider.of<AppState>(context, listen: false);
       appState.navigateToMapWithStop(result['centerStopId']);
@@ -449,7 +449,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     }
     models.Stop? stop = await dbService.getStopById(stopId);
     if (stop != null) {
-      _markerTapped(stop);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _markerTapped(stop);
+        _mapInfo = true; // Open modal
+        if (!mounted) return;
+        setState(() {}); // Update the UI
+      });
     }
   }
 
