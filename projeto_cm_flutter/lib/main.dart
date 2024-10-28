@@ -19,12 +19,7 @@ void main() async {
 
   IsarService().initIsar();
 
-  runApp(
-    ChangeNotifierProvider(
-      create: (_) => AppState(),
-      child: const MyApp(),
-    ),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -45,17 +40,20 @@ class MyApp extends StatelessWidget {
 
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-    return MaterialApp(
-      title: 'Flutter Demo',
-      home: const LoginScreen(),
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue)
-            .copyWith(secondary: Colors.blue[800]),
+    return ChangeNotifierProvider(
+      create: (_) => AppState(),
+      child: MaterialApp(
+        title: 'Flutter Demo',
+        home: const LoginScreen(),
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue)
+              .copyWith(secondary: Colors.blue[800]),
+        ),
+        routes: <String, WidgetBuilder>{
+          '/login': (BuildContext context) => const LoginScreen(),
+          '/app': (BuildContext context) => const App(),
+        },
       ),
-      routes: <String, WidgetBuilder>{
-        '/login': (BuildContext context) => const LoginScreen(),
-        '/app': (BuildContext context) => const App(),
-      },
     );
   }
 }
