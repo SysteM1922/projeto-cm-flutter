@@ -54,16 +54,12 @@ class _SearchStopBarState extends State<SearchStopBar> {
 
   void _handleResultSelection(String result) {
     _focusNode.unfocus();
-    
+
     // Access the data associated with the selected name
     final selectedData = _nameToData[result];
 
     if (selectedData is models.Stop) {
-      // Handle stop selection
-      // MAKE SURE EVERYTHING IS LOADED
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-       _markerTapped(selectedData);
-      });
+      _markerTapped(selectedData);
     }
 
     // Clear search results
@@ -91,9 +87,7 @@ class _SearchStopBarState extends State<SearchStopBar> {
           children: [
             SizedBox(height: 20),
             Visibility(
-              visible: _searchResults.isNotEmpty &&
-                  _searchController.text.isNotEmpty &&
-                  FocusScope.of(context).hasFocus,
+              visible: _searchResults.isNotEmpty && _searchController.text.isNotEmpty && FocusScope.of(context).hasFocus,
               child: AnimatedContainer(
                 duration: Duration(milliseconds: 200),
                 child: Container(
@@ -122,12 +116,9 @@ class _SearchStopBarState extends State<SearchStopBar> {
                               itemBuilder: (context, index) {
                                 return ListTile(
                                   title: Text(_searchResults[index]),
-                                  subtitle: Text("Tap to see more",
-                                      style: TextStyle(
-                                          color: Colors.grey, fontSize: 12)),
+                                  subtitle: Text("Tap to see more", style: TextStyle(color: Colors.grey, fontSize: 12)),
                                   onTap: () {
-                                    _handleResultSelection(
-                                        _searchResults[index]);
+                                    _handleResultSelection(_searchResults[index]);
                                   },
                                 );
                               },
@@ -140,9 +131,7 @@ class _SearchStopBarState extends State<SearchStopBar> {
                           itemBuilder: (context, index) {
                             return ListTile(
                               title: Text(_searchResults[index]),
-                              subtitle: Text("Tap to see more",
-                                  style: TextStyle(
-                                      color: Colors.grey, fontSize: 12)),
+                              subtitle: Text("Tap to see more", style: TextStyle(color: Colors.grey, fontSize: 12)),
                               onTap: () {
                                 _handleResultSelection(_searchResults[index]);
                               },

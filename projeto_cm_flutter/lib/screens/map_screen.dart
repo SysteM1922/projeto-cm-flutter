@@ -457,12 +457,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     }
     models.Stop? stop = await dbService.getStopById(stopId);
     if (stop != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _markerTapped(stop);
-        _mapInfo = true; // Open modal
-        if (!mounted) return;
-        setState(() {}); // Update the UI
-      });
+      _markerTapped(stop);
     }
   }
 
