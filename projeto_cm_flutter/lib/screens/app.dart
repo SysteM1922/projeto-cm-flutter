@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -32,12 +31,14 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
 
   bool _isTabControllerInitialized = false;
 
+  late AppState appState;
+
   @override
   void initState() {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final appState = Provider.of<AppState>(context, listen: false);
+      appState = Provider.of<AppState>(context, listen: false);
       _tabController = TabController(
         animationDuration: const Duration(milliseconds: 200),
         length: 4,
@@ -57,7 +58,7 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
         _isTabControllerInitialized = true;
       });
     });
-    
+
     _listenToConnectionServiceStatus();
   }
 
@@ -67,6 +68,7 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
     if (_isTabControllerInitialized) {
       _tabController.dispose();
     }
+    appState.removeListener(() {});
     super.dispose();
   }
 
@@ -91,26 +93,36 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
   }
 
   void _listenToConnectionServiceStatus() async {
-    _connectionServiceStatusStream = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) async {
-      if (!result.contains(ConnectivityResult.wifi) &&
-          !result.contains(ConnectivityResult.mobile) &&
-          !result.contains(ConnectivityResult.ethernet) &&
-          !result.contains(ConnectivityResult.vpn)) {
-        if (!_internetModal) {
-          _showConnectionDialog("You are offline. Using offline data. Please check your internet connection.");
-          _internetModal = true;
+    _connectionServiceStatusStream = Connectivity().onConnectivityChanged.listen(
+      (List<ConnectivityResult> result) async {
+        if (!result.contains(ConnectivityResult.wifi) &&
+            !result.contains(ConnectivityResult.mobile) &&
+            !result.contains(ConnectivityResult.ethernet) &&
+            !result.contains(ConnectivityResult.vpn)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final appState = Provider.of<AppState>(context, listen: false);
+            appState.setConnectionStatus(false);
+          });
+          if (!_internetModal) {
+            _showConnectionDialog("You are offline. Using offline data. Please check your internet connection.");
+            _internetModal = true;
+          }
+          _isUpdatingDataBase = false;
+          if (!mounted) return;
+          setState(() {});
+          return;
         }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final appState = Provider.of<AppState>(context, listen: false);
+          appState.setConnectionStatus(true);
+        });
+        await _checkDataBaseStatus();
         _isUpdatingDataBase = false;
+        _internetModal = false;
         if (!mounted) return;
         setState(() {});
-        return;
-      }
-      await _checkDataBaseStatus();
-      _isUpdatingDataBase = false;
-      _internetModal = false;
-      if (!mounted) return;
-      setState(() {});
-    });
+      },
+    );
   }
 
   Future<void> _checkDataBaseStatus() async {

@@ -6,8 +6,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:projeto_cm_flutter/screens/login_screen.dart';
 import 'package:http/http.dart' as http;
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:intl/intl.dart';
+import 'package:projeto_cm_flutter/state/app_state.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:projeto_cm_flutter/services/database_service.dart';
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
@@ -26,19 +27,38 @@ class _UserScreenState extends State<UserScreen> {
 
   String _userName = 'UserName';
   String _userId = '';
-  bool isLoading = true;
-  bool isOffline = true;
+  bool _isLoading = true;
+  bool _isOffline = true;
 
   List<Map<String, dynamic>> travelHistory = [];
 
-  StreamSubscription<List<ConnectivityResult>>? _connectionServiceStatusStream;
+  late AppState appState;
 
   @override
   void initState() {
     super.initState();
-    _getUserInfo();
-    _checkInitialConnectivity();
-    _listenToConnectionServiceStatus();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      appState = Provider.of<AppState>(context, listen: false);
+      _isOffline = !appState.connectionStatus;
+      _getUserInfo().then((_) {
+        _fetchTravelHistory();
+      });
+      appState.addListener(() {
+        if (appState.connectionStatus) {
+          _isOffline = false;
+          _fetchTravelHistory();
+        } else {
+          _isOffline = true;
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    appState.removeListener(() {});
+    super.dispose();
   }
 
   Future<void> _getUserInfo() async {
@@ -47,117 +67,59 @@ class _UserScreenState extends State<UserScreen> {
 
       String? userId = await _storage.read(key: "user_id");
 
-      setState(() {
-        _userName = userName ?? 'UserName';
-        _userId = userId ?? '';
-      });
+      _userName = userName ?? 'UserName';
+      _userId = userId ?? '';
+
+      if (!mounted) return;
+      setState(() {});
     } catch (e) {
       log('Error retrieving user info from secure storage: $e');
-      setState(() {
-        _userName = 'UserName';
-        _userId = '';
-      });
+
+      _userName = 'UserName';
+      _userId = '';
+
+      if (!mounted) return;
+      setState(() {});
     }
-  }
-
-  Future<void> _checkInitialConnectivity() async {
-    try {
-      final connectivity = await Connectivity().checkConnectivity();
-
-      bool currentlyOffline = !connectivity.contains(ConnectivityResult.wifi) &&
-          !connectivity.contains(ConnectivityResult.mobile) &&
-          !connectivity.contains(ConnectivityResult.ethernet) &&
-          !connectivity.contains(ConnectivityResult.vpn);
-
-      setState(() {
-        isOffline = currentlyOffline;
-      });
-
-      if (!currentlyOffline) {
-        await _fetchTravelHistory();
-      } else {
-        await _loadFromLocalStorage();
-        setState(() {
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      log('Error during initial connectivity check: $e');
-      setState(() {
-        isOffline = true;
-        isLoading = false;
-      });
-    }
-  }
-
-  void _listenToConnectionServiceStatus() {
-    _connectionServiceStatusStream = Connectivity()
-        .onConnectivityChanged
-        .listen((List<ConnectivityResult> result) {
-      final wasOffline = isOffline;
-
-      bool currentlyOffline = !result.contains(ConnectivityResult.wifi) &&
-          !result.contains(ConnectivityResult.mobile) &&
-          !result.contains(ConnectivityResult.ethernet) &&
-          !result.contains(ConnectivityResult.vpn);
-
-      setState(() {
-        isOffline = currentlyOffline;
-      });
-
-      if (currentlyOffline) {
-        setState(() {
-          isLoading = false;
-        });
-      } else {
-        if (wasOffline) {
-          _fetchTravelHistory();
-        }
-      }
-    });
   }
 
   Future<void> _fetchTravelHistory() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    if (_userId.isEmpty) {
-      setState(() {
-        isLoading = false;
-      });
+    if (_isOffline) {
+      log('Device is offline. Loading travel history from local storage.');
       await _loadFromLocalStorage();
-    }
+    } else {
+      try {
+        final apiUrl = dotenv.env['API_URL'] ?? '';
+        final endpoint = '$apiUrl/user/history/$_userId';
 
-    try {
-      final apiUrl = dotenv.env['API_URL'] ?? '';
-      final endpoint = '$apiUrl/user/history/$_userId';
+        final response = await http.get(Uri.parse(endpoint));
 
-      final response = await http.get(Uri.parse(endpoint));
+        if (response.statusCode == 200) {
+          List<dynamic> data = json.decode(utf8.decode(response.bodyBytes));
+          final historyList = data.map((item) => item as Map<String, dynamic>).toList();
 
-      if (response.statusCode == 200) {
-        List<dynamic> data = json.decode(utf8.decode(response.bodyBytes));
-        final historyList =
-            data.map((item) => item as Map<String, dynamic>).toList();
-
-        // Save to Isar
-        await _saveToLocalStorage(historyList);
-
-        setState(() {
-          travelHistory = historyList;
-        });
+          // Save to Isar
+          await _saveToLocalStorage(historyList);
+          if (!mounted) return;
+          setState(() {
+            travelHistory = historyList;
+          });
+        } else {
+          log('Error fetching travel history from API: ${response.statusCode}');
+          await _loadFromLocalStorage();
+        }
+      } catch (e) {
+        log('Error fetching travel history from API: $e');
+        await _loadFromLocalStorage();
       }
-    } catch (e) {
-      log('Error fetching travel history from API: $e');
     }
 
-    setState(() {
-      isLoading = false;
-    });
+    _isLoading = false;
+    if (!mounted) return;
+    setState(() {});
   }
 
-  Future<void> _saveToLocalStorage(
-      List<Map<String, dynamic>> historyList) async {
+  Future<void> _saveToLocalStorage(List<Map<String, dynamic>> historyList) async {
     try {
       // Clear existing travel history before saving new data
       await _databaseService.clearTravelHistory();
@@ -179,14 +141,15 @@ class _UserScreenState extends State<UserScreen> {
     try {
       final localHistory = await _databaseService.getTravelHistory();
 
-      setState(() {
-        travelHistory = localHistory
-            .map((history) => {
-                  'route_number': history.routeNumber,
-                  'date': history.date?.toIso8601String(),
-                })
-            .toList();
-      });
+      travelHistory = localHistory
+          .map((history) => {
+                'route_number': history.routeNumber,
+                'date': history.date?.toIso8601String(),
+              })
+          .toList();
+
+      if (!mounted) return;
+      setState(() {});
     } catch (e) {
       log('Error loading from local storage: $e');
       setState(() {
@@ -209,12 +172,6 @@ class _UserScreenState extends State<UserScreen> {
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
-  }
-
-  @override
-  void dispose() {
-    _connectionServiceStatusStream?.cancel();
-    super.dispose();
   }
 
   @override
@@ -259,9 +216,7 @@ class _UserScreenState extends State<UserScreen> {
                 ],
               ),
               const SizedBox(height: 20),
-              isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _buildTravelHistory(),
+              _isLoading ? const Center(child: CircularProgressIndicator()) : _buildTravelHistory(),
               const SizedBox(height: 20),
             ],
           ),
@@ -311,6 +266,11 @@ class _UserScreenState extends State<UserScreen> {
             ],
           ),
           child: ExpansionTile(
+            onExpansionChanged: (expanded) {
+              if (!expanded) {
+                _fetchTravelHistory();
+              }
+            },
             backgroundColor: Colors.transparent,
             collapsedBackgroundColor: Colors.transparent,
             title: const Text(
@@ -336,8 +296,7 @@ class _UserScreenState extends State<UserScreen> {
             children: [
               ListView.builder(
                 shrinkWrap: true,
-                physics:
-                    const NeverScrollableScrollPhysics(), // no inner scrolling
+                physics: const NeverScrollableScrollPhysics(), // no inner scrolling
                 itemCount: travelHistory.length,
                 itemBuilder: (context, index) {
                   final travel = travelHistory[index];
@@ -349,23 +308,20 @@ class _UserScreenState extends State<UserScreen> {
 
                   try {
                     travelDate = DateTime.parse(rawDate);
-                    formattedDate =
-                        DateFormat('MMM dd, yyyy - HH:mm').format(travelDate);
+                    formattedDate = DateFormat('MMM dd, yyyy - HH:mm').format(travelDate);
                   } catch (e) {
                     log('Error parsing date: $e');
                   }
 
                   return Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     child: Card(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                       elevation: 1,
                       child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            vertical: 5, horizontal: 15),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
                         title: Text(
                           'Route $routeNumber',
                           style: const TextStyle(

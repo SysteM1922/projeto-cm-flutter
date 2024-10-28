@@ -1,12 +1,13 @@
 import 'dart:async';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
 import 'package:projeto_cm_flutter/services/database_service.dart';
+import 'package:projeto_cm_flutter/state/app_state.dart';
+import 'package:provider/provider.dart';
 
 class Itinerarie {
   final String id;
@@ -43,40 +44,30 @@ class _BusTrackerState extends State<BusTracker> {
   static late Itinerarie _it3;
 
   bool _showBusTracker = false;
-  late StreamSubscription<List<ConnectivityResult>> _connectionServiceStatusStream;
+
+  late AppState appState;
 
   @override
   void initState() {
     super.initState();
 
     _generateBuses();
-    _listenToConnectionServiceStatus();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      appState = Provider.of<AppState>(context, listen: false);
+      _showBusTracker = appState.connectionStatus;
+      setState(() {});
+      appState.addListener(() {
+        _showBusTracker = appState.connectionStatus;
+        setState(() {});
+      });
+    });
   }
 
   @override
   void dispose() {
-    _connectionServiceStatusStream.cancel();
-
+    appState.removeListener(() {});
     super.dispose();
-  }
-
-  void _listenToConnectionServiceStatus() async {
-    _connectionServiceStatusStream = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) async {
-      if (!result.contains(ConnectivityResult.wifi) &&
-          !result.contains(ConnectivityResult.mobile) &&
-          !result.contains(ConnectivityResult.ethernet) &&
-          !result.contains(ConnectivityResult.vpn)) {
-        if (_showBusTracker) {
-          _showBusTracker = false;
-          if (!mounted) return;
-          setState(() {});
-        }
-      } else if (!_showBusTracker) {
-        _showBusTracker = true;
-        if (!mounted) return;
-        setState(() {});
-      }
-    });
   }
 
   Future<Itinerarie> _generateItinerary(String path) async {

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_nfc_hce/flutter_nfc_hce.dart';
 import 'package:flutter_nfc_hce/flutter_nfc_hce_platform_interface.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:projeto_cm_flutter/state/app_state.dart';
+import 'package:provider/provider.dart';
 
 class NFCScreen extends StatefulWidget {
   const NFCScreen({super.key});
@@ -71,11 +73,12 @@ class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
               TextButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    Navigator.pushNamed(context, '/app',
-                        arguments: {'selectedTab': 0});
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      final appState = Provider.of<AppState>(context, listen: false);
+                      appState.setSelectedTab(0);
+                    });
                   },
-                  child: Text('Cancel',
-                      style: TextStyle(color: Colors.blue[800]))),
+                  child: Text('Cancel', style: TextStyle(color: Colors.blue[800]))),
             ],
           );
         },
@@ -145,16 +148,14 @@ class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
           ),
           Flexible(
               child: Container(
-                  margin: EdgeInsets.only(
-                      top: 20.0, left: 20.0, right: 20.0, bottom: 20.0),
+                  margin: EdgeInsets.only(top: 20.0, left: 20.0, right: 20.0, bottom: 20.0),
                   decoration: BoxDecoration(
                     boxShadow: [
                       BoxShadow(
                         color: Colors.grey.withOpacity(1),
                         spreadRadius: 0,
                         blurRadius: 5,
-                        offset:
-                            const Offset(10, 10), // changes position of shadow
+                        offset: const Offset(10, 10), // changes position of shadow
                       ),
                     ],
                     borderRadius: BorderRadius.circular(30.0),
@@ -169,8 +170,7 @@ class _NFCScreenState extends State<NFCScreen> with WidgetsBindingObserver {
               stream: _nfcStatus,
               builder: (context, snapshot) {
                 if (snapshot.data == false) {
-                  _showDialog(
-                      'NFC is not enabled on this device. Please enable it.');
+                  _showDialog('NFC is not enabled on this device. Please enable it.');
                 }
                 return SizedBox.shrink(); // Return an empty widget
               }),

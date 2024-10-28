@@ -77,6 +77,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    log('MapScreen disposed');
     _locationServiceStatusStream?.cancel();
     _connectionServiceStatusStream?.cancel();
 
@@ -86,7 +87,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   @override
   void didUpdateWidget(MapScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    log("${widget.isUpdatingDataBase.toString()} ${oldWidget.isUpdatingDataBase.toString()}");
     if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
       if (widget.isUpdatingDataBase != null && !widget.isUpdatingDataBase!) {
         _getMarkers(widget.stopId).then((_) {
