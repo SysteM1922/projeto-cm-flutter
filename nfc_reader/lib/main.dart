@@ -26,6 +26,7 @@ class MainApp extends StatelessWidget {
     ]);
 
     return MaterialApp(
+      title: 'BusTracker Validator',
       home: const NFCReaderScreen(),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue)
