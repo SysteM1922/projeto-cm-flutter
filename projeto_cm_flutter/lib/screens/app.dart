@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:provider/provider.dart';
@@ -32,9 +33,11 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    log('App initState: Starting');
     _listenToConnectionServiceStatus();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      log('App initState: Post frame callback executed');
       final appState = Provider.of<AppState>(context, listen: false);
       _tabController = TabController(
         length: 4,
@@ -44,18 +47,21 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
 
       _tabController.addListener(() {
         if (_tabController.indexIsChanging) {
+          log('TabController index changing to: ${_tabController.index}');
           appState.setSelectedTab(_tabController.index);
         }
       });
 
       setState(() {
         _isTabControllerInitialized = true;
+        log('App initState: TabController initialized');
       });
     });
   }
 
   @override
   void dispose() {
+    log('App dispose: Cleaning up resources');
     _connectionServiceStatusStream.cancel();
     if (_isTabControllerInitialized) {
       _tabController.dispose();
@@ -64,6 +70,7 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
   }
 
   void _showConnectionDialog(String message) {
+    log('Showing connection dialog with message: $message');
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -84,42 +91,53 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
   }
 
   void _listenToConnectionServiceStatus() async {
+    log('Listening to connection service status');
     _connectionServiceStatusStream = Connectivity()
         .onConnectivityChanged
-        .listen((List<ConnectivityResult> result) async {
+        .listen((List<ConnectivityResult> result) {
+      log('Connectivity changed: $result');
       if (!result.contains(ConnectivityResult.wifi) &&
           !result.contains(ConnectivityResult.mobile) &&
           !result.contains(ConnectivityResult.ethernet) &&
           !result.contains(ConnectivityResult.vpn)) {
+        log('No internet connection detected');
         if (!_internetModal) {
           _showConnectionDialog(
               "You are offline. Using offline data. Please check your internet connection.");
           _internetModal = true;
         }
         if (!mounted) {
+          log('Widget not mounted, returning');
           return;
         }
         setState(() {});
         return;
       }
+      log('Internet connection available, checking database status');
       _checkDataBaseStatus().then((_) {
         if (!mounted) return;
         setState(() {
           _isUpdatingDataBase = false;
           _internetModal = false;
+          log('Database status checked, internet modal set to false');
         });
       });
     });
   }
 
   Future<void> _checkDataBaseStatus() async {
+    log('Checking database status');
     int status = await dbService.isDatabaseUpdated();
+    log('Database status code: $status');
     if (status == 404) {
       setState(() {
         _isUpdatingDataBase = true;
+        log('Database is outdated, starting update');
       });
       await dbService.updateDatabase();
+      log('Database update completed');
     } else if (status == 500) {
+      log('Database status check error, showing connection dialog');
       _showConnectionDialog(
           "An error occurred while checking the database status. Please check your internet connection.");
     }
@@ -127,10 +145,11 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    log('Building App widget');
     return Consumer<AppState>(
       builder: (context, appState, child) {
         if (!_isTabControllerInitialized) {
-          // TabController not initialized yet
+          log('TabController not initialized, showing loading indicator');
           return Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
@@ -139,6 +158,7 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
         // If AppState.selectedTab has changed externally, update TabController
         if (_tabController.index != appState.selectedTab &&
             !_tabController.indexIsChanging) {
+          log('TabController animate to: ${appState.selectedTab}');
           _tabController.animateTo(appState.selectedTab);
         }
 

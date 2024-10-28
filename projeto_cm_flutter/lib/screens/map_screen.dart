@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -40,6 +41,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   bool _gpsOn = false;
   bool _mapInfo = false;
   bool _moving = false;
+  bool _canTrackBuses = false;
   Widget _info = Container();
   var _selected;
 
@@ -64,6 +66,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _searchController = TextEditingController();
 
     _fetchStopAndBusNames();
+    _getMarkers(null);
   }
 
   @override
@@ -77,15 +80,14 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   @override
   void didUpdateWidget(MapScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-
-    if (widget.stopId != oldWidget.stopId && widget.stopId != null) {
-      _centerOnStop(widget.stopId!);
-
-      // Defer the state update to avoid calling setState during build
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final appState = Provider.of<AppState>(context, listen: false);
-        appState.resetCenterStopId();
-      });
+    if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
+      if (widget.isUpdatingDataBase != null && !widget.isUpdatingDataBase!) {
+        _getMarkers(widget.stopId).then((_) {
+          _busTracker = BusTracker(
+            busTapped: _busTapped,
+          );
+        });
+      }
     }
   }
 
@@ -563,7 +565,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   alignDirectionOnUpdate: _alignOnUpdate,
                 ),
               ),
-              _busTracker,
+              if (_canTrackBuses)
+                BusTracker(
+                  busTapped: _busTapped,
+                ),
             ],
           ),
           Visibility(
@@ -704,6 +709,11 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 padding: EdgeInsets.symmetric(horizontal: 10),
                 child: ElevatedButton(
                   onPressed: () async {
+                    _mapInfo = false;
+                    if (mounted) {
+                      setState(() {});
+                    }
+
                     dynamic result;
 
                     if (_selected is models.Stop) {
@@ -722,7 +732,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                       if (mounted) {
                         setState(() {});
                       }
-
                       // Navigate directly to BusScreen
                       result = await Navigator.push(
                         context,

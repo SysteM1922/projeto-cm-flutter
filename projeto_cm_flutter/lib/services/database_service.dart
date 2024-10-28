@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:isar/isar.dart';
 import 'package:projeto_cm_flutter/services/isar_service.dart'; // To get the Isar instance
@@ -166,7 +165,10 @@ class DatabaseService {
             route.buses.save();
           }
         });
-
+        log("Database updated successfully");
+        log("Routes: ${routes.length}");
+        log("Stops: ${stops.length}");
+        log("Buses: ${buses.length}");
         await _storage.write(key: 'last_update', value: lastUpdate);
       } else {
         // Handle error

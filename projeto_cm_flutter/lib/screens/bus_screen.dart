@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
@@ -186,6 +187,7 @@ class _BusScreenState extends State<BusScreen> {
 
     return GestureDetector(
       onTap: () {
+        log("hello");
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final appState = Provider.of<AppState>(context, listen: false);
           appState.navigateToMapWithStop(stop['stop_id']);

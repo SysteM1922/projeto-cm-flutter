@@ -173,10 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context, false);
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => App()),
-                    );
+                    Navigator.pushReplacementNamed(context, '/app');
                   },
                   child: Text('No', style: TextStyle(color: Colors.blue[800])),
                 ),
