@@ -1,15 +1,15 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:projeto_cm_flutter/screens/bus_screen.dart';
 import 'package:projeto_cm_flutter/services/database_service.dart';
+
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
 
 class ScheduleScreen extends StatefulWidget {
-  final models.Stop stop;
-  final VoidCallback screenClosed;
+  const ScheduleScreen({super.key, required this.stop});
 
-  const ScheduleScreen(
-      {super.key, required this.stop, required this.screenClosed});
+  final models.Stop stop;
 
   @override
   _ScheduleScreenState createState() => _ScheduleScreenState();
@@ -83,7 +83,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   void dispose() {
     // Do not close Isar instance
-    widget.screenClosed();
     super.dispose();
   }
 
@@ -107,7 +106,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         centerTitle: true,
         leading: IconButton(
           onPressed: () {
-            widget.screenClosed();
             Navigator.pop(context);
           },
           icon: const Icon(Icons.arrow_back_outlined),
@@ -209,7 +207,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                 BusScreen(busId: schedule.busId ?? ''),
                           ),
                         );
-                        // No need to await and handle result
                       },
                       child: const Text("View Details"),
                     ),

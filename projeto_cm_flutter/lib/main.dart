@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:provider/provider.dart'; 
+
 import 'package:projeto_cm_flutter/screens/app.dart';
 import 'package:projeto_cm_flutter/screens/login_screen.dart';
 import 'package:projeto_cm_flutter/services/isar_service.dart';
-import 'package:projeto_cm_flutter/state/app_state.dart'; 
+import 'package:projeto_cm_flutter/state/app_state.dart';
+import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

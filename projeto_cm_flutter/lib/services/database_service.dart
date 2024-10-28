@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:isar/isar.dart';
@@ -165,10 +164,7 @@ class DatabaseService {
             route.buses.save();
           }
         });
-        log("Database updated successfully");
-        log("Routes: ${routes.length}");
-        log("Stops: ${stops.length}");
-        log("Buses: ${buses.length}");
+
         await _storage.write(key: 'last_update', value: lastUpdate);
       } else {
         // Handle error

@@ -102,6 +102,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     // Username Input Field
                     TextField(
                       controller: _usernameController,
+                      textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         labelText: 'Username',
                         prefixIcon: const Icon(Icons.person),
@@ -117,6 +118,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     // Email Input Field
                     TextField(
                       controller: _emailController,
+                      textInputAction: TextInputAction.next,
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
                       decoration: InputDecoration(
@@ -136,6 +138,8 @@ class _SignupScreenState extends State<SignupScreen> {
                 // Password Input Field
                 TextField(
                   controller: _passwordController,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _signUp(),
                   autofillHints: const [AutofillHints.password],
                   obscureText: true,
                   decoration: InputDecoration(

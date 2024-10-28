@@ -85,7 +85,9 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Biometric authentication failed. Maybe the bio-metrics are not set up.')),
+        SnackBar(
+            content: Text(
+                'Biometric authentication failed. Maybe the bio-metrics are not set up.')),
       );
     }
   }
@@ -99,7 +101,8 @@ class _LoginScreenState extends State<LoginScreen> {
         String? password = await _storage.read(key: 'password');
 
         if (email != null && password != null) {
-          List<ConnectivityResult> connection = (await Connectivity().checkConnectivity());
+          List<ConnectivityResult> connection =
+              (await Connectivity().checkConnectivity());
           if (connection.contains(ConnectivityResult.wifi) ||
               connection.contains(ConnectivityResult.mobile) ||
               connection.contains(ConnectivityResult.ethernet) ||
@@ -152,8 +155,11 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (response.statusCode == 200) {
-        await _storage.write(key: 'user_id', value: json.decode(response.body)['user_id'].toString());
-        await _storage.write(key: 'user_name', value: userCredential.user!.displayName!);
+        await _storage.write(
+            key: 'user_id',
+            value: json.decode(response.body)['user_id'].toString());
+        await _storage.write(
+            key: 'user_name', value: userCredential.user!.displayName!);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('An error occurred. Please try again.')),
@@ -168,7 +174,8 @@ class _LoginScreenState extends State<LoginScreen> {
             return AlertDialog(
               backgroundColor: Colors.white,
               title: const Text('Biometric Login'),
-              content: const Text('Do you want to enable biometric login for future logins?'),
+              content: const Text(
+                  'Do you want to enable biometric login for future logins?'),
               actions: [
                 TextButton(
                   onPressed: () {
@@ -207,7 +214,8 @@ class _LoginScreenState extends State<LoginScreen> {
         String? password = await _storage.read(key: 'password');
 
         if (email != null && password != null) {
-          if (email == _emailController.text && password == _passwordController.text) {
+          if (email == _emailController.text &&
+              password == _passwordController.text) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => App()),
@@ -277,6 +285,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
                         autofillHints: const [AutofillHints.email],
                         decoration: InputDecoration(
                           labelText: 'Email',
@@ -294,6 +303,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextField(
                         controller: _passwordController,
                         autofillHints: const [AutofillHints.password],
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _login(),
                         obscureText: !_visibility,
                         decoration: InputDecoration(
                           labelText: 'Password',
@@ -385,7 +396,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Navigate to the SignUpScreen
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const SignupScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const SignupScreen()),
                     );
                   },
                   child: Text(

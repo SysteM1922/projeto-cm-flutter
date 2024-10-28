@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
@@ -14,9 +14,11 @@ import 'package:projeto_cm_flutter/isar/models.dart' as models;
 import 'package:projeto_cm_flutter/screens/bus_screen.dart';
 import 'package:projeto_cm_flutter/screens/bus_tracker.dart';
 import 'package:projeto_cm_flutter/screens/schedule_screen.dart';
+import 'package:projeto_cm_flutter/screens/widgets/map/gpsIndicator.dart';
+import 'package:projeto_cm_flutter/screens/widgets/map/searchStopBar.dart';
 import 'package:projeto_cm_flutter/services/database_service.dart';
 import 'package:projeto_cm_flutter/state/app_state.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart'; // DatabaseService to get the singleton instance
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key, this.stopId, this.isUpdatingDataBase});
@@ -41,7 +43,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   bool _gpsOn = false;
   bool _mapInfo = false;
   bool _moving = false;
-  bool _canTrackBuses = false;
   Widget _info = Container();
   var _selected;
 
@@ -51,35 +52,19 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   static final List<Marker> _markersList = [];
 
-  late TextEditingController _searchController;
-
-  final Map<String, dynamic> _nameToData = {}; // JUST STOPS
   String? _selectedMarkerId;
 
   @override
   void initState() {
     super.initState();
+
     _requestLocationPermission();
     _listenToLocationServiceStatus();
-    _searchController = TextEditingController();
-    _fetchStopAndBusNames();
-
-    if (widget.isUpdatingDataBase != null && !widget.isUpdatingDataBase!) {
-      _getMarkers(widget.stopId).then((_) {
-        setState(() {
-          _canTrackBuses = true;
-          _busTracker = BusTracker(
-            busTapped: _busTapped,
-          );
-        });
-      });
-    }
   }
 
   @override
   void dispose() {
     _locationServiceStatusStream?.cancel();
-    _searchController.dispose();
 
     super.dispose();
   }
@@ -91,7 +76,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       if (widget.isUpdatingDataBase != null && !widget.isUpdatingDataBase!) {
         _getMarkers(widget.stopId).then((_) {
           setState(() {
-            _canTrackBuses = true;
             _busTracker = BusTracker(
               busTapped: _busTapped,
             );
@@ -100,56 +84,13 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       }
     }
 
-    if (widget.stopId != oldWidget.stopId && widget.stopId != null) {
+    if (widget.stopId != null && widget.stopId != oldWidget.stopId) {
       _centerOnStop(widget.stopId!);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final appState = Provider.of<AppState>(context, listen: false);
         appState.resetCenterStopId();
       });
     }
-  }
-
-  List<String> _searchResults = [];
-
-  void _handleSearch() {
-    String searchText = _searchController.text.toLowerCase();
-    _searchResults.clear();
-    _nameToData.forEach((name, data) {
-      if (name.toLowerCase().contains(searchText)) {
-        _searchResults.add(name);
-      }
-    });
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  void _handleResultSelection(String result) {
-    // Close keyboard
-    FocusScope.of(context).unfocus();
-
-    // Access the data associated with the selected name
-    final selectedData = _nameToData[result];
-
-    if (selectedData is models.Stop) {
-      // Handle stop selection
-      _markerTapped(selectedData);
-    }
-
-    // Clear search results
-    _searchController.clear();
-    _searchResults.clear();
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  Future<void> _fetchStopAndBusNames() async {
-    final List<models.Stop> stops = await dbService.getAllStops();
-
-    for (var stop in stops) {
-      _nameToData[utf8.decode(stop.stopName!.codeUnits)] = stop;
-    }
-    if (!mounted) return;
-    setState(() {});
   }
 
   void _markerTapped(models.Stop stop) async {
@@ -200,9 +141,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
     Future.delayed(Duration(milliseconds: 600), () {
       _moving = false;
-      if (mounted) {
-        setState(() {});
-      }
+      if (!mounted) return;
+      setState(() {});
     });
   }
 
@@ -248,9 +188,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _mapController.centerOnPoint(position);
     Future.delayed(Duration(milliseconds: 600), () {
       _moving = false;
-      if (mounted) {
-        setState(() {});
-      }
+      if (!mounted) return;
+      setState(() {});
     });
   }
 
@@ -293,12 +232,43 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         rotate: true,
       ));
     }
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     setState(() {});
     if (savedStop != null) _markerTapped(savedStop);
     return;
+  }
+
+  void _navigateToScreen() async {
+    dynamic result;
+    if (_selected is models.Stop) {
+      // Navigate to ScheduleScreen
+      result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ScheduleScreen(
+            stop: _selected,
+          ),
+        ),
+      );
+    } else {
+      _mapInfo = false;
+      if (!mounted) return;
+      setState(() {});
+
+      result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BusScreen(
+            busId: _selected,
+          ),
+        ),
+      );
+    }
+    
+    if (result != null && result['centerStopId'] != null) {
+      final appState = Provider.of<AppState>(context, listen: false);
+      appState.navigateToMapWithStop(result['centerStopId']);
+    }
   }
 
   void _showLocationDialog(message) {
@@ -339,9 +309,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _gpsOn = false;
     _gpsIcon = Icon(Icons.gps_off, color: Colors.red, size: 35);
     _currentOption = 0;
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -351,9 +319,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _gpsIcon = Icon(Icons.gps_not_fixed,
         color: Color.fromRGBO(129, 129, 129, 1), size: 35);
     _currentOption = 1;
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -378,9 +344,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _gpsIcon =
         Icon(Icons.explore, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
     _currentOption = 3;
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     setState(() {});
     _mapController
         .animatedRotateTo(_mapController.mapController.camera.rotation);
@@ -413,18 +377,19 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _listenToLocationServiceStatus() {
-    _locationServiceStatusStream =
-        Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
-      if (status == ServiceStatus.disabled) {
-        if (_currentOption != 0) {
-          _toOption0();
+    _locationServiceStatusStream = Geolocator.getServiceStatusStream().listen(
+      (ServiceStatus status) {
+        if (status == ServiceStatus.disabled) {
+          if (_currentOption != 0) {
+            _toOption0();
+          }
+        } else if (status == ServiceStatus.enabled) {
+          if (_currentOption == 0) {
+            _toOption1();
+          }
         }
-      } else if (status == ServiceStatus.enabled) {
-        if (_currentOption == 0) {
-          _toOption1();
-        }
-      }
-    });
+      },
+    );
   }
 
   void _changeLocationOption() async {
@@ -439,9 +404,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         }
       } catch (e) {
         _gpsOn = false;
-        if (mounted) {
-          setState(() {});
-        }
+        if (!mounted) return;
+        setState(() {});
         _showLocationDialog(
             "Unable to get current location. Please enable location services.");
       }
@@ -484,44 +448,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       return;
     }
     models.Stop? stop = await dbService.getStopById(stopId);
-    if (stop != null && stop.latitude != null && stop.longitude != null) {
+    if (stop != null) {
       _markerTapped(stop);
-      _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
-      // Optionally, highlight the marker or show additional info
-      setState(() {
-        _selectedMarkerId = stop.serverId;
-        _mapInfo = true;
-        _info = Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.touch_app,
-              size: 30,
-              color: Colors.transparent,
-            ),
-            Flexible(
-              flex: 2,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  utf8.decode(stop.stopName!.codeUnits),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
-                ),
-              ),
-            ),
-            Icon(
-              Icons.touch_app,
-              size: 30,
-              color: Colors.green,
-            ),
-          ],
-        );
-      });
     }
   }
 
@@ -583,136 +511,18 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   alignDirectionOnUpdate: _alignOnUpdate,
                 ),
               ),
-              if (_busTracker != null) _busTracker,
+              _busTracker,
             ],
-          ),
-          Visibility(
-            visible: _searchResults.isNotEmpty &&
-                _searchController.text.isNotEmpty &&
-                FocusScope.of(context).hasFocus,
-            child: AnimatedContainer(
-              duration: Duration(milliseconds: 200),
-              child: Positioned(
-                top: 70.0,
-                left: 10.0,
-                right: 10.0,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(20.0),
-                      bottomRight: Radius.circular(20.0),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.5),
-                        spreadRadius: 2,
-                        blurRadius: 5,
-                        offset: Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: _searchResults.length > 3
-                      ? SizedBox(
-                          height: 200, // Adjust the height as needed
-                          child: Scrollbar(
-                            thickness: 4.0,
-                            child: ListView.builder(
-                              itemCount: _searchResults.length,
-                              itemBuilder: (context, index) {
-                                return ListTile(
-                                  title: Text(_searchResults[index]),
-                                  subtitle: Text("Tap to see more",
-                                      style: TextStyle(
-                                          color: Colors.grey, fontSize: 12)),
-                                  onTap: () {
-                                    _handleResultSelection(
-                                        _searchResults[index]);
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: _searchResults.length,
-                          itemBuilder: (context, index) {
-                            return ListTile(
-                              title: Text(_searchResults[index]),
-                              subtitle: Text("Tap to see more",
-                                  style: TextStyle(
-                                      color: Colors.grey, fontSize: 12)),
-                              onTap: () {
-                                _handleResultSelection(_searchResults[index]);
-                              },
-                            );
-                          },
-                        ),
-                ),
-              ),
-            ),
           ),
           Positioned(
             top: 50.0,
             left: 10.0,
             right: 10.0,
-            child: Container(
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.5),
-                    spreadRadius: 2,
-                    blurRadius: 5,
-                    offset: Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (value) {
-                    _handleSearch();
-                  },
-                  decoration: InputDecoration(
-                    hintText: "Search for stops...",
-                    floatingLabelBehavior: FloatingLabelBehavior.never,
-                    hintStyle: TextStyle(color: Colors.grey[400]),
-                    border: InputBorder.none,
-                    prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            onPressed: () {
-                              _searchController.clear();
-                              _searchResults.clear();
-                              if (!mounted) return;
-                              setState(() {});
-                            },
-                            icon: Icon(Icons.close, color: Colors.grey[600]))
-                        : null,
-                  ),
-                  textAlignVertical: TextAlignVertical.center,
-                ),
-              ),
-            ),
+            child: SearchStopBar(markerTapped: _markerTapped),
           ),
-          Positioned(
-            bottom: 20,
-            right: 10,
-            child: ElevatedButton(
-              onPressed: () {
-                _changeLocationOption();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                padding: EdgeInsets.all(15),
-              ),
-              child: _gpsIcon,
-            ),
+          GPSIcon(
+            changeLocationOption: _changeLocationOption,
+            gpsIcon: _gpsIcon,
           ),
           Visibility(
             visible: _mapInfo,
@@ -723,48 +533,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10),
                 child: ElevatedButton(
-                  onPressed: () async {
-                    _mapInfo = false;
-                    if (mounted) {
-                      setState(() {});
-                    }
-
-                    dynamic result;
-
-                    if (_selected is models.Stop) {
-                      // Navigate to ScheduleScreen
-                      result = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ScheduleScreen(
-                            stop: _selected,
-                            screenClosed: () {},
-                          ),
-                        ),
-                      );
-                    } else {
-                      _mapInfo = false;
-                      if (mounted) {
-                        setState(() {});
-                      }
-                      // Navigate directly to BusScreen
-                      result = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => BusScreen(
-                            busId: _selected,
-                          ),
-                        ),
-                      );
-                    }
-
-                    if (result != null && result['centerStopId'] != null) {
-                      // Update AppState
-                      final appState =
-                          Provider.of<AppState>(context, listen: false);
-                      appState.navigateToMapWithStop(result['centerStopId']);
-                    }
-                  },
+                  onPressed: _navigateToScreen,
                   style: ElevatedButton.styleFrom(
                     elevation: 1,
                     side: BorderSide(color: Colors.grey, width: 1),

@@ -1,12 +1,11 @@
 import 'dart:convert';
-import 'dart:developer';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
 import 'package:projeto_cm_flutter/screens/route_screen.dart';
 import 'package:projeto_cm_flutter/services/database_service.dart';
-import 'package:projeto_cm_flutter/widgets/stop_icon.dart';
+import 'package:projeto_cm_flutter/screens/widgets/schedule/stop_icon.dart';
 import 'package:projeto_cm_flutter/state/app_state.dart';
+import 'package:provider/provider.dart';
 
 class BusScreen extends StatefulWidget {
   const BusScreen({super.key, required this.busId});
@@ -77,9 +76,8 @@ class _BusScreenState extends State<BusScreen> {
         'stops': stopsData,
       };
     }
-    if (!mounted) {
-      return;
-    }
+
+    if (!mounted) return;
     setState(() {
       isLoading = false;
     });
@@ -187,9 +185,9 @@ class _BusScreenState extends State<BusScreen> {
 
     return GestureDetector(
       onTap: () {
-        log("hello");
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final appState = Provider.of<AppState>(context, listen: false);
+          
           appState.navigateToMapWithStop(stop['stop_id']);
           Navigator.popUntil(context, (route) => route.isFirst);
         });

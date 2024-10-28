@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:projeto_cm_flutter/services/database_service.dart';
-import 'package:projeto_cm_flutter/widgets/stop_icon.dart';
+import 'package:projeto_cm_flutter/screens/widgets/schedule/stop_icon.dart';
 
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
+import 'package:projeto_cm_flutter/state/app_state.dart';
+import 'package:provider/provider.dart';
 
 class RouteScreen extends StatefulWidget {
   final String routeId;
@@ -221,14 +223,11 @@ class _RouteScreenState extends State<RouteScreen> {
 
     return GestureDetector(
         onTap: () {
-          Navigator.pushNamed(
-            context,
-            '/app',
-            arguments: {
-              'selectedTab': 0,
-              'centerStopId': stop['stop_id'],
-            },
-          );
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+          final appState = Provider.of<AppState>(context, listen: false);
+          appState.navigateToMapWithStop(stop['stop_id']);
+          Navigator.popUntil(context, (route) => route.isFirst);
+        });
         },
         child: ListTile(
           contentPadding:
