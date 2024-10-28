@@ -186,11 +186,11 @@ class _BusScreenState extends State<BusScreen> {
 
     return GestureDetector(
       onTap: () {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          final appState = Provider.of<AppState>(context, listen: false);
-          appState.navigateToMapWithStop(stop['stop_id']);
-          Navigator.popUntil(context, (route) => route.isFirst);
-        });
+        final appState = Provider.of<AppState>(context, listen: false);
+        appState.navigateToMapWithStop(stop['stop_id']);
+        appState.setSelectedTab(0); // Map is the first tab
+        
+        Navigator.popUntil(context, (route) => route.isFirst);
       },
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 32),

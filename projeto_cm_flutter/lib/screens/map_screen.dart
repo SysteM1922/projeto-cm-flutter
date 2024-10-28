@@ -58,13 +58,21 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-
     _requestLocationPermission();
     _listenToLocationServiceStatus();
-
     _searchController = TextEditingController();
-
     _fetchStopAndBusNames();
+
+    if (widget.isUpdatingDataBase != null && !widget.isUpdatingDataBase!) {
+      _getMarkers(widget.stopId).then((_) {
+        setState(() {
+          _canTrackBuses = true;
+          _busTracker = BusTracker(
+            busTapped: _busTapped,
+          );
+        });
+      });
+    }
   }
 
   @override
@@ -81,11 +89,22 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
       if (widget.isUpdatingDataBase != null && !widget.isUpdatingDataBase!) {
         _getMarkers(widget.stopId).then((_) {
-          _busTracker = BusTracker(
-            busTapped: _busTapped,
-          );
+          setState(() {
+            _canTrackBuses = true;
+            _busTracker = BusTracker(
+              busTapped: _busTapped,
+            );
+          });
         });
       }
+    }
+
+    if (widget.stopId != oldWidget.stopId && widget.stopId != null) {
+      _centerOnStop(widget.stopId!);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final appState = Provider.of<AppState>(context, listen: false);
+        appState.resetCenterStopId();
+      });
     }
   }
 
@@ -561,10 +580,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   alignDirectionOnUpdate: _alignOnUpdate,
                 ),
               ),
-              if (_canTrackBuses)
-                BusTracker(
-                  busTapped: _busTapped,
-                ),
+              if (_busTracker != null) _busTracker,
             ],
           ),
           Visibility(
