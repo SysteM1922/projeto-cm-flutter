@@ -20,18 +20,21 @@ class _SearchStopBarState extends State<SearchStopBar> {
 
   final Map<String, dynamic> _nameToData = {}; // JUST STOPS
 
+  late FocusNode _focusNode;
+
   @override
   void initState() {
     super.initState();
 
     _searchController = TextEditingController();
-
+    _focusNode = FocusNode();
     _fetchStopAndBusNames();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -50,9 +53,8 @@ class _SearchStopBarState extends State<SearchStopBar> {
   }
 
   void _handleResultSelection(String result) {
-    // Close keyboard
-    FocusScope.of(context).unfocus();
-
+    _focusNode.unfocus();
+    
     // Access the data associated with the selected name
     final selectedData = _nameToData[result];
 
@@ -67,7 +69,7 @@ class _SearchStopBarState extends State<SearchStopBar> {
     // Clear search results
     _searchController.clear();
     _searchResults.clear();
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   void _handleSearch() {
@@ -78,7 +80,7 @@ class _SearchStopBarState extends State<SearchStopBar> {
         _searchResults.add(name);
       }
     });
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   @override
@@ -169,6 +171,7 @@ class _SearchStopBarState extends State<SearchStopBar> {
           child: Align(
             alignment: Alignment.centerLeft,
             child: TextField(
+              focusNode: _focusNode,
               controller: _searchController,
               onChanged: (value) {
                 _handleSearch();
