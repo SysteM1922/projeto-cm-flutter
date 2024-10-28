@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -19,8 +20,7 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> with SingleTickerProviderStateMixin {
-  late StreamSubscription<List<ConnectivityResult>>
-      _connectionServiceStatusStream;
+  late StreamSubscription<List<ConnectivityResult>> _connectionServiceStatusStream;
   final DatabaseService dbService = DatabaseService.getInstance();
 
   static bool? _isUpdatingDataBase;
@@ -35,7 +35,6 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _listenToConnectionServiceStatus();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appState = Provider.of<AppState>(context, listen: false);
@@ -58,6 +57,8 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
         _isTabControllerInitialized = true;
       });
     });
+    
+    _listenToConnectionServiceStatus();
   }
 
   @override
@@ -90,47 +91,42 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
   }
 
   void _listenToConnectionServiceStatus() async {
-    _connectionServiceStatusStream = Connectivity()
-        .onConnectivityChanged
-        .listen((List<ConnectivityResult> result) async {
+    _connectionServiceStatusStream = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> result) async {
       if (!result.contains(ConnectivityResult.wifi) &&
           !result.contains(ConnectivityResult.mobile) &&
           !result.contains(ConnectivityResult.ethernet) &&
           !result.contains(ConnectivityResult.vpn)) {
         if (!_internetModal) {
-          _showConnectionDialog(
-              "You are offline. Using offline data. Please check your internet connection.");
+          _showConnectionDialog("You are offline. Using offline data. Please check your internet connection.");
           _internetModal = true;
         }
-        if (!mounted) {
-          return;
-        }
+        _isUpdatingDataBase = false;
+        if (!mounted) return;
         setState(() {});
         return;
       }
       await _checkDataBaseStatus();
+      _isUpdatingDataBase = false;
+      _internetModal = false;
       if (!mounted) return;
-      setState(() {
-        _isUpdatingDataBase = false;
-        _internetModal = false;
-      });
+      setState(() {});
     });
   }
 
   Future<void> _checkDataBaseStatus() async {
     int status = await dbService.isDatabaseUpdated();
     if (status == 404) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _isUpdatingDataBase = true;
-      });
+      _isUpdatingDataBase = true;
+      if (!mounted) return;
+      setState(() {});
       await dbService.updateDatabase();
+      return;
     } else if (status == 500) {
-      _showConnectionDialog(
-          "An error occurred while checking the database status. Please check your internet connection.");
+      _showConnectionDialog("An error occurred while checking the database status. Please check your internet connection.");
     }
+    _isUpdatingDataBase = false;
+    if (!mounted) return;
+    setState(() {});
     return;
   }
 
@@ -144,8 +140,7 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
       }
 
       // If AppState.selectedTab has changed externally, update TabController
-      if (_tabController.index != appState.selectedTab &&
-          !_tabController.indexIsChanging) {
+      if (_tabController.index != appState.selectedTab && !_tabController.indexIsChanging) {
         _tabController.animateTo(appState.selectedTab);
       }
 
@@ -156,9 +151,7 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
               controller: _tabController,
               physics: const NeverScrollableScrollPhysics(),
               children: <Widget>[
-                MapScreen(
-                    stopId: appState.centerStopId,
-                    isUpdatingDataBase: _isUpdatingDataBase),
+                MapScreen(stopId: appState.centerStopId, isUpdatingDataBase: _isUpdatingDataBase),
                 const ScanQRCodeScreen(),
                 const NFCScreen(),
                 const UserScreen(),
@@ -182,8 +175,7 @@ class _AppState extends State<App> with SingleTickerProviderStateMixin {
                 color: Colors.black45,
                 child: AlertDialog(
                   title: const Text('Database Update'),
-                  content: const Text(
-                      'The database is outdated. Wait while we update it.'),
+                  content: const Text('The database is outdated. Wait while we update it.'),
                   actions: <Widget>[
                     // add loading spinner
                     Center(

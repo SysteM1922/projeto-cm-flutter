@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -12,7 +14,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:permission_handler/permission_handler.dart' as permission;
 import 'package:projeto_cm_flutter/isar/models.dart' as models;
 import 'package:projeto_cm_flutter/screens/bus_screen.dart';
-import 'package:projeto_cm_flutter/screens/bus_tracker.dart';
+import 'package:projeto_cm_flutter/screens/widgets/map/bus_tracker.dart';
 import 'package:projeto_cm_flutter/screens/schedule_screen.dart';
 import 'package:projeto_cm_flutter/screens/widgets/map/gpsIndicator.dart';
 import 'package:projeto_cm_flutter/screens/widgets/map/searchStopBar.dart';
@@ -34,8 +36,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   Icon _gpsIcon = Icon(Icons.gps_off, color: Colors.red, size: 35);
 
-  late final AnimatedMapController _mapController =
-      AnimatedMapController(vsync: this);
+  late final AnimatedMapController _mapController = AnimatedMapController(vsync: this);
   LatLng _center = LatLng(40.63672, -8.65049);
   AlignOnUpdate _alignOnUpdate = AlignOnUpdate.never;
 
@@ -47,8 +48,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   var _selected;
 
   Widget _busTracker = Container();
+  Widget _searchStopBar = Container();
 
   StreamSubscription<ServiceStatus>? _locationServiceStatusStream;
+  StreamSubscription<List<ConnectivityResult>>? _connectionServiceStatusStream;
 
   static final List<Marker> _markersList = [];
 
@@ -58,6 +61,16 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
+    if (widget.isUpdatingDataBase == false) {
+      _getMarkers(null).then((_) {
+        _busTracker = BusTracker(
+          busTapped: _busTapped,
+        );
+        _searchStopBar = SearchStopBar(markerTapped: _markerTapped);
+        setState(() {});
+      });
+    }
+
     _requestLocationPermission();
     _listenToLocationServiceStatus();
   }
@@ -65,6 +78,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _locationServiceStatusStream?.cancel();
+    _connectionServiceStatusStream?.cancel();
 
     super.dispose();
   }
@@ -72,14 +86,18 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   @override
   void didUpdateWidget(MapScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    log("${widget.isUpdatingDataBase.toString()} ${oldWidget.isUpdatingDataBase.toString()}");
     if (widget.isUpdatingDataBase != oldWidget.isUpdatingDataBase) {
       if (widget.isUpdatingDataBase != null && !widget.isUpdatingDataBase!) {
         _getMarkers(widget.stopId).then((_) {
-          setState(() {
+          if (_busTracker is! BusTracker) {
             _busTracker = BusTracker(
               busTapped: _busTapped,
             );
-          });
+            _searchStopBar = SearchStopBar(markerTapped: _markerTapped);
+            if (!mounted) return;
+            setState(() {});
+          }
         });
       }
     }
@@ -138,16 +156,19 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     if (!mounted) return;
     setState(() {});
 
-    _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!));
-    Future.delayed(Duration(milliseconds: 600), () {
+    await _mapController.centerOnPoint(LatLng(stop.latitude!, stop.longitude!)).then((_) {
       _moving = false;
       if (!mounted) return;
       setState(() {});
     });
   }
 
-  void _busTapped(
-      LatLng position, Itinerarie itinerary, int updateInterval) async {
+  void _busTapped(LatLng position, Itinerarie itinerary, int updateInterval) async {
+    FocusScope.of(context).unfocus();
+
+    _selectedMarkerId = null;
+    await _getMarkers(null);
+
     _info = Row(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -185,8 +206,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     if (!mounted) return;
     setState(() {});
 
-    _mapController.centerOnPoint(position);
-    Future.delayed(Duration(milliseconds: 600), () {
+    await _mapController.centerOnPoint(position).then((_) {
       _moving = false;
       if (!mounted) return;
       setState(() {});
@@ -216,8 +236,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           },
           child: Icon(
             Icons.location_on,
-            color:
-                stop.serverId == _selectedMarkerId ? Colors.green : Colors.red,
+            color: stop.serverId == _selectedMarkerId ? Colors.green : Colors.red,
             size: 40.0,
             shadows: [
               Shadow(
@@ -316,8 +335,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void _toOption1() {
     _alignOnUpdate = AlignOnUpdate.never;
     _gpsOn = true;
-    _gpsIcon = Icon(Icons.gps_not_fixed,
-        color: Color.fromRGBO(129, 129, 129, 1), size: 35);
+    _gpsIcon = Icon(Icons.gps_not_fixed, color: Color.fromRGBO(129, 129, 129, 1), size: 35);
     _currentOption = 1;
     if (!mounted) return;
     setState(() {});
@@ -326,28 +344,23 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void _toOption2([Position? position]) async {
     _alignOnUpdate = AlignOnUpdate.never;
     _gpsOn = true;
-    _gpsIcon =
-        Icon(Icons.gps_fixed, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
+    _gpsIcon = Icon(Icons.gps_fixed, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
     _currentOption = 2;
     if (!mounted) {
       return;
     }
     setState(() {});
-    position ??= await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(
-            accuracy: LocationAccuracy.best, distanceFilter: 10));
+    position ??= await Geolocator.getCurrentPosition(locationSettings: LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 10));
     _mapController.centerOnPoint(LatLng(position.latitude, position.longitude));
   }
 
   void _toOption3() async {
     _alignOnUpdate = AlignOnUpdate.always;
-    _gpsIcon =
-        Icon(Icons.explore, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
+    _gpsIcon = Icon(Icons.explore, color: Color.fromRGBO(0, 153, 255, 1), size: 35);
     _currentOption = 3;
     if (!mounted) return;
     setState(() {});
-    _mapController
-        .animatedRotateTo(_mapController.mapController.camera.rotation);
+    _mapController.animatedRotateTo(_mapController.mapController.camera.rotation);
     _mapController.animatedZoomTo(18);
   }
 
@@ -356,11 +369,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       LocationPermission permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
         _toOption0();
-      } else if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        Position position = await Geolocator.getCurrentPosition(
-            locationSettings: LocationSettings(
-                accuracy: LocationAccuracy.best, distanceFilter: 10));
+      } else if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        Position position = await Geolocator.getCurrentPosition(locationSettings: LocationSettings(accuracy: LocationAccuracy.best, distanceFilter: 10));
         _center = LatLng(position.latitude, position.longitude);
         if (widget.stopId == null) {
           _toOption2(position);
@@ -406,8 +416,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         _gpsOn = false;
         if (!mounted) return;
         setState(() {});
-        _showLocationDialog(
-            "Unable to get current location. Please enable location services.");
+        _showLocationDialog("Unable to get current location. Please enable location services.");
       }
     } else {
       _requestLocationPermission();
@@ -421,8 +430,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Location Services Disabled'),
-          content: Text(
-              'Location services are disabled. Would you like to enable them?'),
+          content: Text('Location services are disabled. Would you like to enable them?'),
           actions: [
             TextButton(
               onPressed: () async {
@@ -471,9 +479,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               minZoom: 7.0,
               maxZoom: 18.0,
               cameraConstraint: CameraConstraint.contain(
-                  bounds: LatLngBounds(
-                      LatLng(42.29301588859787, -6.047089196299635),
-                      LatLng(36.660350971821785, -10.027199015120786))),
+                  bounds: LatLngBounds(LatLng(42.29301588859787, -6.047089196299635), LatLng(36.660350971821785, -10.027199015120786))),
               keepAlive: true,
               onMapEvent: (MapEvent event) {
                 if (event is MapEventMoveStart) {
@@ -523,7 +529,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             top: 50.0,
             left: 10.0,
             right: 10.0,
-            child: SearchStopBar(markerTapped: _markerTapped),
+            child: _searchStopBar,
           ),
           GPSIcon(
             changeLocationOption: _changeLocationOption,
