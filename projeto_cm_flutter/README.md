@@ -1,16 +1,27 @@
-# projeto_cm_flutter
+# BusTracker - Flutter Project
+# Authors: Guilherme Antunes [103600], Pedro Rasinhas [103541]
 
-A new Flutter project.
+## Description
+BusTracker is an application that helps public transport users by offering real-time bus tracking, schedule information via QR codes at bus stops, and NFC-based validation system.
 
-## Getting Started
+## Requirements
+- Flutter SDK
+- ```flutter doctor``` must run without issues
 
-This project is a starting point for a Flutter application.
+## Installation
+Before executing the project dependencies must be installed with
+```bash
+flutter pub get
+```
+## Running the Application
+The BusTracker Validator app was developed to run **only on android devices** so after you run the command ...
+```bash
+flutter run
+```
+... you **must select a real android device**.
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Building the APK
+To compile the project in order to build an apk file to be installed on an android the following command must be run.
+```bash
+flutter build apk
+```
